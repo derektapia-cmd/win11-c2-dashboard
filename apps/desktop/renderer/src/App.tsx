@@ -1,21 +1,27 @@
 import {
   Activity,
   Bot,
-  CloudSun,
+  CalendarDays,
+  ChartNoAxesCombined,
+  ChevronLeft,
+  ChevronRight,
+  CircleDot,
   Command,
-  Cpu,
-  Gauge,
+  Download,
+  FileText,
   Inbox,
   LayoutDashboard,
   Lock,
   Mail,
   Newspaper,
   NotebookPen,
-  PlugZap,
+  Plus,
   Search,
   Settings,
-  ShieldCheck,
+  Share2,
+  Sparkles,
   Terminal,
+  Upload,
   WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -23,7 +29,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import "./styles.css";
 
-type TileStatus = "ready" | "local" | "planned" | "offline";
 type HealthStatus = "checking" | "online" | "offline";
 
 type HealthResponse = {
@@ -39,116 +44,136 @@ type HealthState = {
   detail: string;
 };
 
-type DashboardTile = {
-  id: string;
-  title: string;
-  eyebrow: string;
-  status: TileStatus;
-  metric: string;
-  detail: string;
-  accent: "cyan" | "green" | "amber" | "rose" | "violet" | "blue";
+type NavItem = {
+  label: string;
   icon: LucideIcon;
+  active?: boolean;
 };
 
-const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard },
+type MetricCard = {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "positive" | "neutral" | "warning" | "danger";
+};
+
+type ModuleCard = {
+  title: string;
+  status: string;
+  detail: string;
+  icon: LucideIcon;
+  active?: boolean;
+};
+
+const navItems: NavItem[] = [
+  { label: "Dashboard", icon: LayoutDashboard, active: true },
+  { label: "Calendar", icon: CalendarDays },
   { label: "Email", icon: Mail },
-  { label: "Markets", icon: Activity },
+  { label: "Markets", icon: ChartNoAxesCombined },
   { label: "Notes", icon: NotebookPen },
-  { label: "AI", icon: Bot },
+  { label: "AI Tools", icon: Bot },
+  { label: "Terminal", icon: Terminal },
   { label: "Wallets", icon: WalletCards },
   { label: "Settings", icon: Settings },
 ];
 
-const tiles: DashboardTile[] = [
+const metrics: MetricCard[] = [
   {
-    id: "gmail",
-    title: "Gmail",
-    eyebrow: "Integration planned",
-    status: "planned",
-    metric: "OAuth later",
-    detail: "Unread count, priority inbox, search, drafts, and send confirmation.",
-    accent: "blue",
-    icon: Inbox,
+    label: "Backend health",
+    value: "Live",
+    detail: "FastAPI status feed",
+    tone: "positive",
   },
   {
-    id: "weather",
-    title: "Weather",
-    eyebrow: "Provider pending",
-    status: "planned",
-    metric: "Home forecast",
-    detail: "Current conditions, alerts, hourly view, and seven-day outlook.",
-    accent: "cyan",
-    icon: CloudSun,
+    label: "Active modules",
+    value: "8",
+    detail: "Planned dashboard tiles",
+    tone: "neutral",
   },
   {
-    id: "news",
-    title: "News Feeds",
-    eyebrow: "RSS ready next",
-    status: "planned",
-    metric: "Sources",
-    detail: "Headlines, read state, article links, and save-to-notes flow.",
-    accent: "amber",
-    icon: Newspaper,
+    label: "Local mode",
+    value: "On",
+    detail: "No external secrets loaded",
+    tone: "positive",
   },
   {
-    id: "notes",
-    title: "Notes",
-    eyebrow: "Local-first",
-    status: "local",
-    metric: "Draft space",
-    detail: "Pinned notes, tags, local search, and future dictation support.",
-    accent: "green",
-    icon: NotebookPen,
+    label: "Security gate",
+    value: "Strict",
+    detail: "Send/sign/delete confirmations",
+    tone: "warning",
   },
   {
-    id: "terminal",
-    title: "Terminal",
-    eyebrow: "Safety gated",
-    status: "planned",
-    metric: "PowerShell",
-    detail: "Command history, clear working directory, and warning gates.",
-    accent: "violet",
-    icon: Terminal,
-  },
-  {
-    id: "ai",
-    title: "AI Tools",
-    eyebrow: "Launcher mode",
-    status: "planned",
-    metric: "Chat + Code",
-    detail: "ChatGPT launcher/API mode and Claude Code workspace sessions.",
-    accent: "rose",
-    icon: Bot,
-  },
-  {
-    id: "wallets",
-    title: "Wallets",
-    eyebrow: "Read-only v1",
-    status: "planned",
-    metric: "No signing",
-    detail: "MetaMask and Phantom balances through approved wallet flows.",
-    accent: "amber",
-    icon: WalletCards,
-  },
-  {
-    id: "expansion",
-    title: "Expansion Slots",
-    eyebrow: "Reserved",
-    status: "ready",
-    metric: "3 slots",
-    detail: "Automation, calendar/tasks, and market analytics placeholders.",
-    accent: "cyan",
-    icon: PlugZap,
+    label: "Expansion slots",
+    value: "3",
+    detail: "Automation, calendar, analytics",
+    tone: "neutral",
   },
 ];
 
+const modules: ModuleCard[] = [
+  {
+    title: "Notes",
+    status: "Local-first",
+    detail: "SQLite-backed notes come next.",
+    icon: NotebookPen,
+    active: true,
+  },
+  {
+    title: "Gmail",
+    status: "OAuth later",
+    detail: "Unread count, search, drafts, replies.",
+    icon: Inbox,
+  },
+  {
+    title: "Weather",
+    status: "Provider pending",
+    detail: "Forecast, alerts, conditions.",
+    icon: Activity,
+  },
+  {
+    title: "News",
+    status: "RSS planned",
+    detail: "Sources, read state, saved links.",
+    icon: Newspaper,
+  },
+  {
+    title: "Terminal",
+    status: "Warning-gated",
+    detail: "PowerShell with command audit log.",
+    icon: Terminal,
+  },
+  {
+    title: "Wallets",
+    status: "Read-only v1",
+    detail: "MetaMask and Phantom balances.",
+    icon: WalletCards,
+  },
+];
+
+const progressItems = [
+  { label: "Foundation", value: "100%", amount: "Repo, docs, scaffold", progress: 100 },
+  { label: "Backend", value: "30%", amount: "Health endpoint online", progress: 30 },
+  { label: "Frontend", value: "35%", amount: "Dashboard shell live", progress: 35 },
+  { label: "Local data", value: "0%", amount: "Notes API next", progress: 0 },
+];
+
+const calendarDays = [
+  { day: "1", label: "Health API", tone: "green" },
+  { day: "2", label: "Renderer", tone: "green" },
+  { day: "3", label: "", tone: "empty" },
+  { day: "4", label: "", tone: "empty" },
+  { day: "5", label: "CORS", tone: "green" },
+  { day: "6", label: "UI pass", tone: "green" },
+  { day: "7", label: "Notes next", tone: "active" },
+  { day: "8", label: "", tone: "empty" },
+];
+
 const tickerItems = [
-  { symbol: "BTC", price: "$--,--", change: "waiting", tone: "neutral" },
-  { symbol: "ETH", price: "$-,---", change: "waiting", tone: "neutral" },
-  { symbol: "SOL", price: "$---", change: "waiting", tone: "neutral" },
-  { symbol: "BNB", price: "$---", change: "waiting", tone: "neutral" },
-  { symbol: "BASE", price: "tracked later", change: "planned", tone: "neutral" },
+  { symbol: "BTC", price: "$--,--", change: "waiting" },
+  { symbol: "ETH", price: "$-,---", change: "waiting" },
+  { symbol: "SOL", price: "$---", change: "waiting" },
+  { symbol: "BNB", price: "$---", change: "waiting" },
+  { symbol: "BASE", price: "tracked later", change: "planned" },
 ];
 
 const healthUrl =
@@ -168,12 +193,41 @@ function formatHealthTimestamp(timestampUtc: string) {
   });
 }
 
+function formatDashboardDate(date: Date) {
+  return date.toLocaleDateString([], {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getGreeting(date: Date) {
+  const hour = date.getHours();
+
+  if (hour < 12) {
+    return "Good morning";
+  }
+
+  if (hour < 18) {
+    return "Good afternoon";
+  }
+
+  return "Good evening";
+}
+
 function App() {
+  const [now, setNow] = useState(() => new Date());
   const [health, setHealth] = useState<HealthState>({
     status: "checking",
     summary: "Checking",
     detail: "Contacting local backend",
   });
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(new Date()), 60000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -233,103 +287,209 @@ function App() {
     };
   }, []);
 
-  const healthIcon = useMemo(() => {
+  const liveHealthTone = useMemo(() => {
     if (health.status === "online") {
-      return <ShieldCheck size={18} />;
+      return "positive";
     }
 
-    return <Gauge size={18} />;
+    if (health.status === "checking") {
+      return "warning";
+    }
+
+    return "danger";
   }, [health.status]);
+
+  const currentMetrics = useMemo(
+    () =>
+      metrics.map((metric) =>
+        metric.label === "Backend health"
+          ? {
+              ...metric,
+              value: health.summary,
+              detail: health.detail,
+              tone: liveHealthTone,
+            }
+          : metric,
+      ),
+    [health.detail, health.summary, liveHealthTone],
+  );
 
   return (
     <main className="dashboard-shell">
-      <aside className="utility-rail" aria-label="Dashboard sections">
-        <div className="brand-mark" aria-label="Win11 C2 Dashboard">
-          <Command size={22} />
+      <aside className="sidebar" aria-label="Dashboard sections">
+        <div className="brand-lockup">
+          <div className="brand-icon">
+            <Command size={22} />
+          </div>
+          <div>
+            <strong>C2</strong>
+            <span>COMMAND CENTER</span>
+          </div>
+          <span className="beta-pill">BETA</span>
         </div>
-        <nav className="rail-nav">
+
+        <div className="sidebar-rule" />
+
+        <p className="sidebar-label">Operations</p>
+        <nav className="side-nav">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
               <button
-                className="rail-button"
+                className={item.active ? "side-nav-button active" : "side-nav-button"}
                 key={item.label}
-                title={item.label}
                 type="button"
               >
-                <Icon size={20} />
+                <Icon size={18} />
                 <span>{item.label}</span>
+                {item.active ? <CircleDot size={12} /> : null}
               </button>
             );
           })}
         </nav>
       </aside>
 
-      <section className="workspace" aria-label="Command center dashboard">
-        <header className="top-command-bar">
-          <div>
-            <p className="kicker">Local command center</p>
-            <h1>Win11 C2 Dashboard</h1>
-          </div>
-
-          <label className="global-search">
-            <Search size={18} />
-            <input aria-label="Global search" placeholder="Search notes, tiles, commands" />
-          </label>
-
-          <div className="status-cluster" aria-label="System status">
-            <span className="status-pill online">
-              <ShieldCheck size={16} />
-              Local safe
-            </span>
-            <button className="icon-button" title="Privacy lock" type="button">
-              <Lock size={18} />
+      <section className="page-shell" aria-label="Command center dashboard">
+        <header className="page-header">
+          <h1>Dashboard</h1>
+          <div className="header-actions">
+            <button className="toolbar-button" type="button">
+              <Upload size={15} />
+              <span>Import</span>
             </button>
-            <button className="icon-button" title="Settings" type="button">
-              <Settings size={18} />
+            <button className="toolbar-button" type="button">
+              <Download size={15} />
+              <span>Export</span>
+            </button>
+            <button className="toolbar-button" type="button">
+              <FileText size={15} />
+              <span>Report</span>
+            </button>
+            <button className="icon-button" title="Privacy lock" type="button">
+              <Lock size={17} />
+            </button>
+            <button className="primary-action" type="button">
+              <Plus size={18} />
+              <span>Add Tile</span>
             </button>
           </div>
         </header>
 
-        <section className="overview-strip" aria-label="System overview">
-          <div className={`overview-item health-${health.status}`}>
-            {healthIcon}
-            <span>Backend health</span>
-            <strong>{health.summary}</strong>
-            <small>{health.detail}</small>
-          </div>
-          <div className="overview-item">
-            <Cpu size={18} />
-            <span>Mode</span>
-            <strong>Local-first</strong>
-          </div>
-          <div className="overview-item">
-            <Activity size={18} />
-            <span>Tiles</span>
-            <strong>8 planned</strong>
-          </div>
-        </section>
+        <section className="content-surface">
+          <section className="welcome-panel">
+            <div>
+              <div className="welcome-title-row">
+                <h2>{getGreeting(now)}, Derek</h2>
+                <span className="rank-badge">
+                  <Sparkles size={14} />
+                  LOCAL 1
+                </span>
+              </div>
+              <p className="date-row">
+                <CalendarDays size={15} />
+                {formatDashboardDate(now)}
+              </p>
+              <p className="green-copy">Stay modular and keep every tile isolated.</p>
+            </div>
 
-        <section className="tile-grid" aria-label="Dashboard tiles">
-          {tiles.map((tile) => {
-            const Icon = tile.icon;
-            return (
-              <article className={`dashboard-tile accent-${tile.accent}`} key={tile.id}>
-                <header className="tile-header">
-                  <div className="tile-icon">
-                    <Icon size={20} />
-                  </div>
-                  <div>
-                    <p>{tile.eyebrow}</p>
-                    <h2>{tile.title}</h2>
-                  </div>
-                  <span className={`tile-status status-${tile.status}`}>{tile.status}</span>
-                </header>
-                <div className="tile-metric">{tile.metric}</div>
-                <p className="tile-detail">{tile.detail}</p>
+            <div className="welcome-actions">
+              <div className={`today-card health-${health.status}`}>
+                <span>Backend</span>
+                <strong>{health.summary}</strong>
+              </div>
+              <button className="share-button" type="button">
+                <Share2 size={17} />
+                <span>Share</span>
+              </button>
+            </div>
+          </section>
+
+          <section className="metric-grid" aria-label="System metrics">
+            {currentMetrics.map((metric) => (
+              <article className={`metric-card tone-${metric.tone}`} key={metric.label}>
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+                <p>{metric.detail}</p>
               </article>
-            );
-          })}
+            ))}
+          </section>
+
+          <section className="mini-grid" aria-label="Module summary">
+            {modules.map((module) => {
+              const Icon = module.icon;
+              return (
+                <article className={module.active ? "module-card active" : "module-card"} key={module.title}>
+                  <Icon size={17} />
+                  <div>
+                    <span>{module.title}</span>
+                    <strong>{module.status}</strong>
+                    <p>{module.detail}</p>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+
+          <section className="lower-dashboard">
+            <article className="progress-panel">
+              <header className="panel-heading">
+                <div>
+                  <CircleDot size={15} />
+                  <h2>Build Progress</h2>
+                </div>
+                <button className="ghost-action" type="button">
+                  <Search size={15} />
+                  <span>Inspect</span>
+                </button>
+              </header>
+
+              <div className="progress-grid">
+                {progressItems.map((item) => (
+                  <div className="progress-card" key={item.label}>
+                    <div className="progress-card-header">
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                    </div>
+                    <p>{item.amount}</p>
+                    <div className="progress-track">
+                      <span style={{ width: `${item.progress}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="calendar-panel">
+              <header className="panel-heading">
+                <div>
+                  <CalendarDays size={15} />
+                  <h2>April 2026</h2>
+                </div>
+                <div className="calendar-controls">
+                  <button className="icon-button" title="Previous month" type="button">
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button className="icon-button" title="Next month" type="button">
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </header>
+
+              <div className="calendar-stats">
+                <span>Month</span>
+                <strong>Milestones</strong>
+              </div>
+
+              <div className="calendar-grid">
+                {calendarDays.map((day) => (
+                  <div className={`calendar-day ${day.tone}`} key={day.day}>
+                    <span>{day.day}</span>
+                    {day.label ? <strong>{day.label}</strong> : null}
+                  </div>
+                ))}
+              </div>
+            </article>
+          </section>
         </section>
       </section>
 
