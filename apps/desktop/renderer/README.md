@@ -14,6 +14,10 @@ The first renderer goal is a static local dashboard shell:
 
 No external APIs are called from this first version.
 
+The dashboard does call the local backend health endpoint when it is running:
+
+`http://127.0.0.1:8765/health`
+
 ## Run
 
 ```powershell
@@ -23,3 +27,4 @@ npm run dev
 
 Then open the local Vite URL shown in the terminal.
 
+To see live backend health, run the backend service first.

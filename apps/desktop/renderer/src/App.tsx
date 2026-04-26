@@ -19,10 +19,25 @@ import {
   WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import "./styles.css";
 
 type TileStatus = "ready" | "local" | "planned" | "offline";
+type HealthStatus = "checking" | "online" | "offline";
+
+type HealthResponse = {
+  status: string;
+  service: string;
+  version: string;
+  timestamp_utc: string;
+};
+
+type HealthState = {
+  status: HealthStatus;
+  summary: string;
+  detail: string;
+};
 
 type DashboardTile = {
   id: string;
@@ -136,7 +151,96 @@ const tickerItems = [
   { symbol: "BASE", price: "tracked later", change: "planned", tone: "neutral" },
 ];
 
+const healthUrl =
+  import.meta.env.VITE_BACKEND_HEALTH_URL ?? "http://127.0.0.1:8765/health";
+
+function formatHealthTimestamp(timestampUtc: string) {
+  const date = new Date(timestampUtc);
+
+  if (Number.isNaN(date.getTime())) {
+    return "time unknown";
+  }
+
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 function App() {
+  const [health, setHealth] = useState<HealthState>({
+    status: "checking",
+    summary: "Checking",
+    detail: "Contacting local backend",
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkHealth() {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 4000);
+
+      try {
+        const response = await fetch(healthUrl, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const payload = (await response.json()) as HealthResponse;
+
+        if (!isMounted) {
+          return;
+        }
+
+        setHealth({
+          status: payload.status === "ok" ? "online" : "offline",
+          summary: payload.status === "ok" ? "Online" : "Degraded",
+          detail: `${payload.service} ${payload.version} at ${formatHealthTimestamp(
+            payload.timestamp_utc,
+          )}`,
+        });
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        const detail =
+          error instanceof Error && error.name === "AbortError"
+            ? "Backend health check timed out"
+            : "Start FastAPI on port 8765";
+
+        setHealth({
+          status: "offline",
+          summary: "Offline",
+          detail,
+        });
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }
+
+    void checkHealth();
+    const intervalId = window.setInterval(checkHealth, 30000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  const healthIcon = useMemo(() => {
+    if (health.status === "online") {
+      return <ShieldCheck size={18} />;
+    }
+
+    return <Gauge size={18} />;
+  }, [health.status]);
+
   return (
     <main className="dashboard-shell">
       <aside className="utility-rail" aria-label="Dashboard sections">
@@ -188,10 +292,11 @@ function App() {
         </header>
 
         <section className="overview-strip" aria-label="System overview">
-          <div className="overview-item">
-            <Gauge size={18} />
+          <div className={`overview-item health-${health.status}`}>
+            {healthIcon}
             <span>Backend health</span>
-            <strong>Ready</strong>
+            <strong>{health.summary}</strong>
+            <small>{health.detail}</small>
           </div>
           <div className="overview-item">
             <Cpu size={18} />

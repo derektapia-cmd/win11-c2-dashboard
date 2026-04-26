@@ -41,6 +41,11 @@ Then open:
 
 If `/health` returns `status: ok`, the backend skeleton is alive.
 
+The React renderer is allowed to call this local backend from:
+
+- `http://127.0.0.1:5173`
+- `http://localhost:5173`
+
 ## Test
 
 ```powershell

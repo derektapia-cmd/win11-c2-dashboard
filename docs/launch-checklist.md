@@ -17,6 +17,7 @@ This checklist starts small and will grow as the app becomes real.
 - [x] Backend health endpoint responds
 - [x] Frontend opens locally
 - [x] Dashboard shell renders
+- [x] Dashboard reads backend health endpoint
 - [ ] Tile registry loads placeholder tiles
 - [ ] Notes can be saved and reloaded locally
 - [ ] Settings persist after restart
