@@ -21,9 +21,15 @@ body {
   background: #050505;
 }
 
-button {
+button,
+input,
+textarea {
   color: inherit;
   font: inherit;
+}
+
+textarea {
+  resize: vertical;
 }
 
 h1,
@@ -254,6 +260,14 @@ p {
   outline: none;
 }
 
+.primary-action:disabled {
+  border-color: #333;
+  color: #6f7277;
+  background: #202020;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
 .content-surface {
   padding: 34px 30px 30px;
 }
@@ -263,6 +277,7 @@ p {
 .module-card,
 .progress-panel,
 .calendar-panel,
+.notes-panel,
 .today-card,
 .progress-card {
   border: 1px solid #282a2b;
@@ -482,7 +497,8 @@ p {
 }
 
 .progress-panel,
-.calendar-panel {
+.calendar-panel,
+.notes-panel {
   min-height: 240px;
   padding: 18px;
   border-top-color: rgba(0, 214, 139, 0.62);
@@ -562,6 +578,116 @@ p {
   border-radius: inherit;
   background: #04d68b;
   box-shadow: 0 0 14px rgba(0, 214, 139, 0.46);
+}
+
+.notes-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.notes-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(0, 214, 139, 0.28);
+  border-radius: 999px;
+  color: #04d68b;
+  background: rgba(0, 214, 139, 0.1);
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.notes-offline .notes-status {
+  border-color: rgba(240, 95, 95, 0.34);
+  color: #f05f5f;
+  background: rgba(240, 95, 95, 0.12);
+}
+
+.note-form {
+  display: grid;
+  gap: 9px;
+}
+
+.note-form input,
+.note-form textarea {
+  width: 100%;
+  border: 1px solid #282a2b;
+  border-radius: 8px;
+  color: #f3f4f6;
+  background: #171717;
+  outline: none;
+}
+
+.note-form input {
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.note-form textarea {
+  min-height: 92px;
+  padding: 10px 12px;
+}
+
+.note-form input:focus,
+.note-form textarea:focus {
+  border-color: rgba(0, 214, 139, 0.55);
+  box-shadow: 0 0 0 2px rgba(0, 214, 139, 0.1);
+}
+
+.note-form input::placeholder,
+.note-form textarea::placeholder {
+  color: #707277;
+}
+
+.note-form .primary-action {
+  width: 100%;
+}
+
+.notes-list {
+  display: grid;
+  gap: 8px;
+}
+
+.note-preview,
+.empty-notes {
+  border: 1px solid #282a2b;
+  border-radius: 8px;
+  background: #171717;
+}
+
+.note-preview {
+  padding: 10px 12px;
+}
+
+.note-preview strong {
+  display: block;
+  color: #ffffff;
+  font-size: 0.88rem;
+}
+
+.note-preview p {
+  display: -webkit-box;
+  margin: 4px 0 0;
+  overflow: hidden;
+  color: #8e9095;
+  font-size: 0.78rem;
+  font-weight: 700;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.empty-notes {
+  display: grid;
+  min-height: 62px;
+  place-items: center;
+  padding: 12px;
+  color: #8e9095;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: center;
 }
 
 .calendar-controls {

@@ -8,6 +8,7 @@ The first backend goal is intentionally small:
 
 - Start a FastAPI app.
 - Answer `GET /health`.
+- Save and list local notes with SQLite.
 - Give the future Electron/React app a local service to talk to.
 
 ## Setup
@@ -35,6 +36,7 @@ For local test tools:
 Then open:
 
 - Health check: `http://127.0.0.1:8765/health`
+- Notes API: `http://127.0.0.1:8765/notes`
 - API docs: `http://127.0.0.1:8765/docs`
 
 ## Beginner Checkpoint

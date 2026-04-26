@@ -10,7 +10,7 @@ This checklist starts small and will grow as the app becomes real.
 - [x] Add project scaffold
 - [x] Add backend skeleton
 - [x] Add frontend skeleton
-- [ ] Add local database setup
+- [x] Add local database setup
 
 ## First Working App
 
@@ -19,7 +19,7 @@ This checklist starts small and will grow as the app becomes real.
 - [x] Dashboard shell renders
 - [x] Dashboard reads backend health endpoint
 - [ ] Tile registry loads placeholder tiles
-- [ ] Notes can be saved and reloaded locally
+- [x] Notes can be saved and reloaded locally
 - [ ] Settings persist after restart
 
 ## Safety

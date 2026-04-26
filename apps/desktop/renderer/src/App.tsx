@@ -3,8 +3,6 @@ import {
   Bot,
   CalendarDays,
   ChartNoAxesCombined,
-  ChevronLeft,
-  ChevronRight,
   CircleDot,
   Command,
   Download,
@@ -26,6 +24,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 
 import "./styles.css";
 
@@ -42,6 +41,25 @@ type HealthState = {
   status: HealthStatus;
   summary: string;
   detail: string;
+};
+
+type NoteStatus = "checking" | "ready" | "offline" | "saving";
+
+type NoteRecord = {
+  id: string;
+  title: string;
+  body: string;
+  tags: string[];
+  pinned: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type NotesState = {
+  status: NoteStatus;
+  summary: string;
+  detail: string;
+  items: NoteRecord[];
 };
 
 type NavItem = {
@@ -110,11 +128,11 @@ const metrics: MetricCard[] = [
   },
 ];
 
-const modules: ModuleCard[] = [
+const baseModules: ModuleCard[] = [
   {
     title: "Notes",
     status: "Local-first",
-    detail: "SQLite-backed notes come next.",
+    detail: "SQLite-backed notes are ready.",
     icon: NotebookPen,
     active: true,
   },
@@ -154,18 +172,7 @@ const progressItems = [
   { label: "Foundation", value: "100%", amount: "Repo, docs, scaffold", progress: 100 },
   { label: "Backend", value: "30%", amount: "Health endpoint online", progress: 30 },
   { label: "Frontend", value: "35%", amount: "Dashboard shell live", progress: 35 },
-  { label: "Local data", value: "0%", amount: "Notes API next", progress: 0 },
-];
-
-const calendarDays = [
-  { day: "1", label: "Health API", tone: "green" },
-  { day: "2", label: "Renderer", tone: "green" },
-  { day: "3", label: "", tone: "empty" },
-  { day: "4", label: "", tone: "empty" },
-  { day: "5", label: "CORS", tone: "green" },
-  { day: "6", label: "UI pass", tone: "green" },
-  { day: "7", label: "Notes next", tone: "active" },
-  { day: "8", label: "", tone: "empty" },
+  { label: "Local data", value: "20%", amount: "Notes API online", progress: 20 },
 ];
 
 const tickerItems = [
@@ -178,6 +185,7 @@ const tickerItems = [
 
 const healthUrl =
   import.meta.env.VITE_BACKEND_HEALTH_URL ?? "http://127.0.0.1:8765/health";
+const notesUrl = import.meta.env.VITE_BACKEND_NOTES_URL ?? "http://127.0.0.1:8765/notes";
 
 function formatHealthTimestamp(timestampUtc: string) {
   const date = new Date(timestampUtc);
@@ -216,6 +224,37 @@ function getGreeting(date: Date) {
   return "Good evening";
 }
 
+async function requestNotes(signal?: AbortSignal) {
+  const response = await fetch(notesUrl, { signal });
+
+  if (!response.ok) {
+    throw new Error(`Notes request failed with HTTP ${response.status}`);
+  }
+
+  return (await response.json()) as NoteRecord[];
+}
+
+async function createDashboardNote(payload: { title: string; body: string }) {
+  const response = await fetch(notesUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      title: payload.title,
+      body: payload.body,
+      tags: ["dashboard"],
+      pinned: false,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Note save failed with HTTP ${response.status}`);
+  }
+
+  return (await response.json()) as NoteRecord;
+}
+
 function App() {
   const [now, setNow] = useState(() => new Date());
   const [health, setHealth] = useState<HealthState>({
@@ -223,6 +262,14 @@ function App() {
     summary: "Checking",
     detail: "Contacting local backend",
   });
+  const [notes, setNotes] = useState<NotesState>({
+    status: "checking",
+    summary: "Checking",
+    detail: "Loading local notes",
+    items: [],
+  });
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteBody, setNoteBody] = useState("");
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setNow(new Date()), 60000);
@@ -287,6 +334,85 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    async function loadNotes() {
+      try {
+        const items = await requestNotes(controller.signal);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setNotes({
+          status: "ready",
+          summary: `${items.length} saved`,
+          detail: items.length > 0 ? "SQLite notes API connected" : "Ready for first note",
+          items,
+        });
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setNotes({
+          status: "offline",
+          summary: "Offline",
+          detail: "Start backend to load notes",
+          items: [],
+        });
+      }
+    }
+
+    void loadNotes();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, []);
+
+  async function handleNoteSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!noteBody.trim()) {
+      return;
+    }
+
+    setNotes((current) => ({
+      ...current,
+      status: "saving",
+      summary: "Saving",
+      detail: "Writing note to SQLite",
+    }));
+
+    try {
+      await createDashboardNote({
+        title: noteTitle.trim() || "Dashboard note",
+        body: noteBody.trim(),
+      });
+      const items = await requestNotes();
+
+      setNotes({
+        status: "ready",
+        summary: `${items.length} saved`,
+        detail: "Latest note saved locally",
+        items,
+      });
+      setNoteTitle("");
+      setNoteBody("");
+    } catch {
+      setNotes((current) => ({
+        ...current,
+        status: "offline",
+        summary: "Save failed",
+        detail: "Check backend on port 8765",
+      }));
+    }
+  }
+
   const liveHealthTone = useMemo(() => {
     if (health.status === "online") {
       return "positive";
@@ -312,6 +438,23 @@ function App() {
           : metric,
       ),
     [health.detail, health.summary, liveHealthTone],
+  );
+
+  const currentModules = useMemo(
+    () =>
+      baseModules.map((module) =>
+        module.title === "Notes"
+          ? {
+              ...module,
+              status: notes.summary,
+              detail:
+                notes.status === "ready" && notes.items.length > 0
+                  ? `Latest: ${notes.items[0].title}`
+                  : notes.detail,
+            }
+          : module,
+      ),
+    [notes.detail, notes.items, notes.status, notes.summary],
   );
 
   return (
@@ -415,7 +558,7 @@ function App() {
           </section>
 
           <section className="mini-grid" aria-label="Module summary">
-            {modules.map((module) => {
+            {currentModules.map((module) => {
               const Icon = module.icon;
               return (
                 <article className={module.active ? "module-card active" : "module-card"} key={module.title}>
@@ -459,34 +602,47 @@ function App() {
               </div>
             </article>
 
-            <article className="calendar-panel">
+            <article className={`notes-panel notes-${notes.status}`}>
               <header className="panel-heading">
                 <div>
-                  <CalendarDays size={15} />
-                  <h2>April 2026</h2>
+                  <NotebookPen size={15} />
+                  <h2>Quick Notes</h2>
                 </div>
-                <div className="calendar-controls">
-                  <button className="icon-button" title="Previous month" type="button">
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button className="icon-button" title="Next month" type="button">
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
+                <span className="notes-status">{notes.summary}</span>
               </header>
 
-              <div className="calendar-stats">
-                <span>Month</span>
-                <strong>Milestones</strong>
-              </div>
+              <form className="note-form" onSubmit={handleNoteSubmit}>
+                <input
+                  aria-label="Note title"
+                  onChange={(event) => setNoteTitle(event.target.value)}
+                  placeholder="Title"
+                  value={noteTitle}
+                />
+                <textarea
+                  aria-label="Note body"
+                  onChange={(event) => setNoteBody(event.target.value)}
+                  placeholder="Capture a thought"
+                  rows={4}
+                  value={noteBody}
+                />
+                <button className="primary-action" disabled={!noteBody.trim()} type="submit">
+                  <Plus size={17} />
+                  <span>{notes.status === "saving" ? "Saving" : "Save Note"}</span>
+                </button>
+              </form>
 
-              <div className="calendar-grid">
-                {calendarDays.map((day) => (
-                  <div className={`calendar-day ${day.tone}`} key={day.day}>
-                    <span>{day.day}</span>
-                    {day.label ? <strong>{day.label}</strong> : null}
-                  </div>
+              <div className="notes-list" aria-label="Recent notes">
+                {notes.items.slice(0, 3).map((note) => (
+                  <article className="note-preview" key={note.id}>
+                    <strong>{note.title}</strong>
+                    <p>{note.body}</p>
+                  </article>
                 ))}
+                {notes.items.length === 0 ? (
+                  <div className="empty-notes">
+                    <span>{notes.detail}</span>
+                  </div>
+                ) : null}
               </div>
             </article>
           </section>

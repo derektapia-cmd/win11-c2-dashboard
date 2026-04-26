@@ -18,6 +18,10 @@ The dashboard does call the local backend health endpoint when it is running:
 
 `http://127.0.0.1:8765/health`
 
+It also uses the local Notes API:
+
+`http://127.0.0.1:8765/notes`
+
 ## Run
 
 ```powershell
@@ -27,4 +31,4 @@ npm run dev
 
 Then open the local Vite URL shown in the terminal.
 
-To see live backend health, run the backend service first.
+To see live backend health and save notes, run the backend service first.
