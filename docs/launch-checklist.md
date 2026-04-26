@@ -9,14 +9,14 @@ This checklist starts small and will grow as the app becomes real.
 - [x] Add roadmap
 - [x] Add project scaffold
 - [x] Add backend skeleton
-- [ ] Add frontend skeleton
+- [x] Add frontend skeleton
 - [ ] Add local database setup
 
 ## First Working App
 
 - [x] Backend health endpoint responds
-- [ ] Frontend opens locally
-- [ ] Dashboard shell renders
+- [x] Frontend opens locally
+- [x] Dashboard shell renders
 - [ ] Tile registry loads placeholder tiles
 - [ ] Notes can be saved and reloaded locally
 - [ ] Settings persist after restart
