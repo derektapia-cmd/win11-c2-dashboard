@@ -8,13 +8,13 @@ This checklist starts small and will grow as the app becomes real.
 - [x] Clone project locally
 - [x] Add roadmap
 - [x] Add project scaffold
-- [ ] Add backend skeleton
+- [x] Add backend skeleton
 - [ ] Add frontend skeleton
 - [ ] Add local database setup
 
 ## First Working App
 
-- [ ] Backend health endpoint responds
+- [x] Backend health endpoint responds
 - [ ] Frontend opens locally
 - [ ] Dashboard shell renders
 - [ ] Tile registry loads placeholder tiles
