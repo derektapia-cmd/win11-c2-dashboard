@@ -8,7 +8,7 @@ The first backend goal is intentionally small:
 
 - Start a FastAPI app.
 - Answer `GET /health`.
-- Save and list local notes with SQLite.
+- Save, list, pin, edit, and delete local notes with SQLite.
 - Give the future Electron/React app a local service to talk to.
 
 ## Setup

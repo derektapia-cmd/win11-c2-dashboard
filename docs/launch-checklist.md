@@ -20,6 +20,7 @@ This checklist starts small and will grow as the app becomes real.
 - [x] Dashboard reads backend health endpoint
 - [ ] Tile registry loads placeholder tiles
 - [x] Notes can be saved and reloaded locally
+- [x] Notes can be pinned, edited, and deleted locally
 - [ ] Settings persist after restart
 
 ## Safety

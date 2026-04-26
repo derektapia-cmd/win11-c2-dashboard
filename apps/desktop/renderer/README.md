@@ -22,6 +22,8 @@ It also uses the local Notes API:
 
 `http://127.0.0.1:8765/notes`
 
+The Quick Notes panel supports creating, pinning, editing, and deleting local notes.
+
 ## Run
 
 ```powershell

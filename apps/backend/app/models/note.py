@@ -18,6 +18,21 @@ class NoteCreate(BaseModel):
         return value
 
 
+class NoteUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=120)
+    body: str | None = Field(default=None, max_length=5000)
+    tags: list[str] | None = Field(default=None, max_length=12)
+    pinned: bool | None = None
+
+    @field_validator("body")
+    @classmethod
+    def body_must_have_text(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("Note body cannot be empty.")
+
+        return value
+
+
 class NoteResponse(BaseModel):
     id: str
     title: str

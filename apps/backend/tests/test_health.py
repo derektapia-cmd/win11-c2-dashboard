@@ -41,3 +41,18 @@ def test_notes_post_allows_local_renderer_origin() -> None:
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+
+
+def test_notes_patch_allows_local_renderer_origin() -> None:
+    client = TestClient(app)
+
+    response = client.options(
+        "/notes/example-id",
+        headers={
+            "Origin": "http://127.0.0.1:5173",
+            "Access-Control-Request-Method": "PATCH",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"

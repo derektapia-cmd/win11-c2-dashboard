@@ -49,6 +49,68 @@ def test_notes_can_be_saved_and_loaded() -> None:
     assert notes[0]["id"] == created["id"]
 
 
+def test_notes_can_be_updated() -> None:
+    client = TestClient(app)
+    create_response = client.post(
+        "/notes",
+        json={
+            "title": "Draft",
+            "body": "Original body",
+            "tags": ["draft"],
+        },
+    )
+    note_id = create_response.json()["id"]
+
+    update_response = client.patch(
+        f"/notes/{note_id}",
+        json={
+            "title": "Pinned note",
+            "body": "Updated body",
+            "tags": ["dashboard", "updated"],
+            "pinned": True,
+        },
+    )
+
+    assert update_response.status_code == 200
+    updated = update_response.json()
+    assert updated["title"] == "Pinned note"
+    assert updated["body"] == "Updated body"
+    assert updated["tags"] == ["dashboard", "updated"]
+    assert updated["pinned"] is True
+
+
+def test_notes_can_be_deleted() -> None:
+    client = TestClient(app)
+    create_response = client.post(
+        "/notes",
+        json={
+            "title": "Temporary note",
+            "body": "Delete this note.",
+        },
+    )
+    note_id = create_response.json()["id"]
+
+    delete_response = client.delete(f"/notes/{note_id}")
+    list_response = client.get("/notes")
+
+    assert delete_response.status_code == 204
+    assert list_response.status_code == 200
+    assert list_response.json() == []
+
+
+def test_missing_note_update_returns_404() -> None:
+    client = TestClient(app)
+
+    response = client.patch(
+        "/notes/missing-note",
+        json={
+            "pinned": True,
+        },
+    )
+
+    assert response.status_code == 404
+
+
 def test_blank_note_body_is_rejected() -> None:
     client = TestClient(app)
 
@@ -61,4 +123,3 @@ def test_blank_note_body_is_rejected() -> None:
     )
 
     assert response.status_code == 422
-

@@ -13,14 +13,19 @@ import {
   Mail,
   Newspaper,
   NotebookPen,
+  Pencil,
+  Pin,
+  PinOff,
   Plus,
   Search,
   Settings,
   Share2,
   Sparkles,
   Terminal,
+  Trash2,
   Upload,
   WalletCards,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -255,6 +260,35 @@ async function createDashboardNote(payload: { title: string; body: string }) {
   return (await response.json()) as NoteRecord;
 }
 
+async function updateDashboardNote(
+  noteId: string,
+  payload: Partial<Pick<NoteRecord, "title" | "body" | "tags" | "pinned">>,
+) {
+  const response = await fetch(`${notesUrl}/${noteId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Note update failed with HTTP ${response.status}`);
+  }
+
+  return (await response.json()) as NoteRecord;
+}
+
+async function deleteDashboardNote(noteId: string) {
+  const response = await fetch(`${notesUrl}/${noteId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Note delete failed with HTTP ${response.status}`);
+  }
+}
+
 function App() {
   const [now, setNow] = useState(() => new Date());
   const [health, setHealth] = useState<HealthState>({
@@ -270,6 +304,7 @@ function App() {
   });
   const [noteTitle, setNoteTitle] = useState("");
   const [noteBody, setNoteBody] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setNow(new Date()), 60000);
@@ -374,6 +409,15 @@ function App() {
     };
   }, []);
 
+  function setLoadedNotes(items: NoteRecord[], detail: string) {
+    setNotes({
+      status: "ready",
+      summary: `${items.length} saved`,
+      detail: items.length > 0 ? detail : "Ready for first note",
+      items,
+    });
+  }
+
   async function handleNoteSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -389,25 +433,97 @@ function App() {
     }));
 
     try {
-      await createDashboardNote({
-        title: noteTitle.trim() || "Dashboard note",
-        body: noteBody.trim(),
-      });
+      if (editingNoteId) {
+        await updateDashboardNote(editingNoteId, {
+          title: noteTitle.trim() || "Dashboard note",
+          body: noteBody.trim(),
+        });
+      } else {
+        await createDashboardNote({
+          title: noteTitle.trim() || "Dashboard note",
+          body: noteBody.trim(),
+        });
+      }
+
       const items = await requestNotes();
 
-      setNotes({
-        status: "ready",
-        summary: `${items.length} saved`,
-        detail: "Latest note saved locally",
-        items,
-      });
+      setLoadedNotes(items, editingNoteId ? "Note updated locally" : "Latest note saved locally");
       setNoteTitle("");
       setNoteBody("");
+      setEditingNoteId(null);
     } catch {
       setNotes((current) => ({
         ...current,
         status: "offline",
         summary: "Save failed",
+        detail: "Check backend on port 8765",
+      }));
+    }
+  }
+
+  function startEditingNote(note: NoteRecord) {
+    setEditingNoteId(note.id);
+    setNoteTitle(note.title);
+    setNoteBody(note.body);
+  }
+
+  function cancelEditingNote() {
+    setEditingNoteId(null);
+    setNoteTitle("");
+    setNoteBody("");
+  }
+
+  async function handlePinToggle(note: NoteRecord) {
+    setNotes((current) => ({
+      ...current,
+      status: "saving",
+      summary: note.pinned ? "Unpinning" : "Pinning",
+      detail: "Updating local note",
+    }));
+
+    try {
+      await updateDashboardNote(note.id, {
+        pinned: !note.pinned,
+      });
+      const items = await requestNotes();
+      setLoadedNotes(items, note.pinned ? "Note unpinned" : "Note pinned");
+    } catch {
+      setNotes((current) => ({
+        ...current,
+        status: "offline",
+        summary: "Update failed",
+        detail: "Check backend on port 8765",
+      }));
+    }
+  }
+
+  async function handleDeleteNote(note: NoteRecord) {
+    const confirmed = window.confirm(`Delete "${note.title}"?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setNotes((current) => ({
+      ...current,
+      status: "saving",
+      summary: "Deleting",
+      detail: "Removing local note",
+    }));
+
+    try {
+      await deleteDashboardNote(note.id);
+      const items = await requestNotes();
+      setLoadedNotes(items, "Note deleted locally");
+
+      if (editingNoteId === note.id) {
+        cancelEditingNote();
+      }
+    } catch {
+      setNotes((current) => ({
+        ...current,
+        status: "offline",
+        summary: "Delete failed",
         detail: "Check backend on port 8765",
       }));
     }
@@ -625,16 +741,61 @@ function App() {
                   rows={4}
                   value={noteBody}
                 />
-                <button className="primary-action" disabled={!noteBody.trim()} type="submit">
-                  <Plus size={17} />
-                  <span>{notes.status === "saving" ? "Saving" : "Save Note"}</span>
-                </button>
+                <div className="note-form-actions">
+                  <button className="primary-action" disabled={!noteBody.trim()} type="submit">
+                    <Plus size={17} />
+                    <span>
+                      {notes.status === "saving"
+                        ? "Saving"
+                        : editingNoteId
+                          ? "Update Note"
+                          : "Save Note"}
+                    </span>
+                  </button>
+                  {editingNoteId ? (
+                    <button className="ghost-action" onClick={cancelEditingNote} type="button">
+                      <X size={16} />
+                      <span>Cancel</span>
+                    </button>
+                  ) : null}
+                </div>
               </form>
 
               <div className="notes-list" aria-label="Recent notes">
                 {notes.items.slice(0, 3).map((note) => (
-                  <article className="note-preview" key={note.id}>
-                    <strong>{note.title}</strong>
+                  <article
+                    className={note.pinned ? "note-preview pinned" : "note-preview"}
+                    key={note.id}
+                  >
+                    <div className="note-preview-header">
+                      <strong>{note.title}</strong>
+                      <div className="note-actions">
+                        <button
+                          className="note-icon-button"
+                          onClick={() => void handlePinToggle(note)}
+                          title={note.pinned ? "Unpin note" : "Pin note"}
+                          type="button"
+                        >
+                          {note.pinned ? <PinOff size={14} /> : <Pin size={14} />}
+                        </button>
+                        <button
+                          className="note-icon-button"
+                          onClick={() => startEditingNote(note)}
+                          title="Edit note"
+                          type="button"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          className="note-icon-button danger"
+                          onClick={() => void handleDeleteNote(note)}
+                          title="Delete note"
+                          type="button"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
                     <p>{note.body}</p>
                   </article>
                 ))}

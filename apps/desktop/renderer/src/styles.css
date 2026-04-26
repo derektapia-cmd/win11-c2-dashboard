@@ -646,6 +646,12 @@ p {
   width: 100%;
 }
 
+.note-form-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
 .notes-list {
   display: grid;
   gap: 8px;
@@ -660,6 +666,18 @@ p {
 
 .note-preview {
   padding: 10px 12px;
+}
+
+.note-preview.pinned {
+  border-color: rgba(0, 214, 139, 0.45);
+  background: rgba(0, 214, 139, 0.1);
+}
+
+.note-preview-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
 }
 
 .note-preview strong {
@@ -677,6 +695,37 @@ p {
   font-weight: 700;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.note-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.note-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #2e3031;
+  border-radius: 7px;
+  color: #a7a7ad;
+  background: #111;
+  cursor: pointer;
+}
+
+.note-icon-button:hover,
+.note-icon-button:focus-visible {
+  border-color: rgba(0, 214, 139, 0.42);
+  color: #04d68b;
+  outline: none;
+}
+
+.note-icon-button.danger:hover,
+.note-icon-button.danger:focus-visible {
+  border-color: rgba(240, 95, 95, 0.45);
+  color: #f05f5f;
 }
 
 .empty-notes {
@@ -883,6 +932,10 @@ p {
   .metric-grid,
   .mini-grid,
   .progress-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .note-form-actions {
     grid-template-columns: 1fr;
   }
 
