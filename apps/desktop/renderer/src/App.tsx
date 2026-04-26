@@ -7,6 +7,7 @@ import {
   Command,
   Download,
   FileText,
+  EyeOff,
   Inbox,
   LayoutDashboard,
   Lock,
@@ -65,6 +66,16 @@ type NotesState = {
   summary: string;
   detail: string;
   items: NoteRecord[];
+};
+
+type DashboardSettingsRecord = {
+  privacy_mode: boolean;
+};
+
+type DashboardSettingsState = {
+  status: "checking" | "ready" | "offline" | "saving";
+  privacyMode: boolean;
+  detail: string;
 };
 
 type NavItem = {
@@ -191,6 +202,8 @@ const tickerItems = [
 const healthUrl =
   import.meta.env.VITE_BACKEND_HEALTH_URL ?? "http://127.0.0.1:8765/health";
 const notesUrl = import.meta.env.VITE_BACKEND_NOTES_URL ?? "http://127.0.0.1:8765/notes";
+const settingsUrl =
+  import.meta.env.VITE_BACKEND_SETTINGS_URL ?? "http://127.0.0.1:8765/settings";
 
 function formatHealthTimestamp(timestampUtc: string) {
   const date = new Date(timestampUtc);
@@ -289,6 +302,32 @@ async function deleteDashboardNote(noteId: string) {
   }
 }
 
+async function requestDashboardSettings(signal?: AbortSignal) {
+  const response = await fetch(settingsUrl, { signal });
+
+  if (!response.ok) {
+    throw new Error(`Settings request failed with HTTP ${response.status}`);
+  }
+
+  return (await response.json()) as DashboardSettingsRecord;
+}
+
+async function updateDashboardSettings(payload: Partial<DashboardSettingsRecord>) {
+  const response = await fetch(settingsUrl, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Settings update failed with HTTP ${response.status}`);
+  }
+
+  return (await response.json()) as DashboardSettingsRecord;
+}
+
 function App() {
   const [now, setNow] = useState(() => new Date());
   const [health, setHealth] = useState<HealthState>({
@@ -305,6 +344,11 @@ function App() {
   const [noteTitle, setNoteTitle] = useState("");
   const [noteBody, setNoteBody] = useState("");
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [dashboardSettings, setDashboardSettings] = useState<DashboardSettingsState>({
+    status: "checking",
+    privacyMode: false,
+    detail: "Loading privacy mode",
+  });
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setNow(new Date()), 60000);
@@ -402,6 +446,46 @@ function App() {
     }
 
     void loadNotes();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    async function loadDashboardSettings() {
+      try {
+        const loadedSettings = await requestDashboardSettings(controller.signal);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setDashboardSettings({
+          status: "ready",
+          privacyMode: loadedSettings.privacy_mode,
+          detail: loadedSettings.privacy_mode
+            ? "Note previews hidden"
+            : "Note previews visible",
+        });
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setDashboardSettings({
+          status: "offline",
+          privacyMode: false,
+          detail: "Settings unavailable",
+        });
+      }
+    }
+
+    void loadDashboardSettings();
 
     return () => {
       isMounted = false;
@@ -529,6 +613,37 @@ function App() {
     }
   }
 
+  async function handlePrivacyToggle() {
+    const nextPrivacyMode = !dashboardSettings.privacyMode;
+
+    setDashboardSettings((current) => ({
+      ...current,
+      status: "saving",
+      privacyMode: nextPrivacyMode,
+      detail: nextPrivacyMode ? "Turning privacy mode on" : "Turning privacy mode off",
+    }));
+
+    try {
+      const savedSettings = await updateDashboardSettings({
+        privacy_mode: nextPrivacyMode,
+      });
+
+      setDashboardSettings({
+        status: "ready",
+        privacyMode: savedSettings.privacy_mode,
+        detail: savedSettings.privacy_mode
+          ? "Note previews hidden"
+          : "Note previews visible",
+      });
+    } catch {
+      setDashboardSettings({
+        status: "offline",
+        privacyMode: !nextPrivacyMode,
+        detail: "Settings unavailable",
+      });
+    }
+  }
+
   const liveHealthTone = useMemo(() => {
     if (health.status === "online") {
       return "positive";
@@ -556,6 +671,22 @@ function App() {
     [health.detail, health.summary, liveHealthTone],
   );
 
+  const privacyMetric = useMemo<MetricCard>(
+    () => ({
+      label: "Privacy mode",
+      value: dashboardSettings.privacyMode ? "On" : "Off",
+      detail: dashboardSettings.detail,
+      tone: dashboardSettings.privacyMode ? "positive" : "neutral",
+    }),
+    [dashboardSettings.detail, dashboardSettings.privacyMode],
+  );
+
+  const displayMetrics = useMemo(() => {
+    const nextMetrics = [...currentMetrics];
+    nextMetrics[3] = privacyMetric;
+    return nextMetrics;
+  }, [currentMetrics, privacyMetric]);
+
   const currentModules = useMemo(
     () =>
       baseModules.map((module) =>
@@ -574,7 +705,13 @@ function App() {
   );
 
   return (
-    <main className="dashboard-shell">
+    <main
+      className={
+        dashboardSettings.privacyMode
+          ? "dashboard-shell privacy-mode"
+          : "dashboard-shell"
+      }
+    >
       <aside className="sidebar" aria-label="Dashboard sections">
         <div className="brand-lockup">
           <div className="brand-icon">
@@ -624,8 +761,19 @@ function App() {
               <FileText size={15} />
               <span>Report</span>
             </button>
-            <button className="icon-button" title="Privacy lock" type="button">
-              <Lock size={17} />
+            <button
+              className={
+                dashboardSettings.privacyMode ? "icon-button active" : "icon-button"
+              }
+              onClick={() => void handlePrivacyToggle()}
+              title={
+                dashboardSettings.privacyMode
+                  ? "Turn privacy mode off"
+                  : "Turn privacy mode on"
+              }
+              type="button"
+            >
+              {dashboardSettings.privacyMode ? <EyeOff size={17} /> : <Lock size={17} />}
             </button>
             <button className="primary-action" type="button">
               <Plus size={18} />
@@ -648,7 +796,11 @@ function App() {
                 <CalendarDays size={15} />
                 {formatDashboardDate(now)}
               </p>
-              <p className="green-copy">Stay modular and keep every tile isolated.</p>
+              <p className="green-copy">
+                {dashboardSettings.privacyMode
+                  ? "Privacy mode is shielding note previews."
+                  : "Stay modular and keep every tile isolated."}
+              </p>
             </div>
 
             <div className="welcome-actions">
@@ -664,7 +816,7 @@ function App() {
           </section>
 
           <section className="metric-grid" aria-label="System metrics">
-            {currentMetrics.map((metric) => (
+            {displayMetrics.map((metric) => (
               <article className={`metric-card tone-${metric.tone}`} key={metric.label}>
                 <span>{metric.label}</span>
                 <strong>{metric.value}</strong>
@@ -796,7 +948,11 @@ function App() {
                         </button>
                       </div>
                     </div>
-                    <p>{note.body}</p>
+                    <p>
+                      {dashboardSettings.privacyMode
+                        ? "Hidden while privacy mode is on."
+                        : note.body}
+                    </p>
                   </article>
                 ))}
                 {notes.items.length === 0 ? (

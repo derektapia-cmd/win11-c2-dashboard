@@ -24,6 +24,10 @@ It also uses the local Notes API:
 
 The Quick Notes panel supports creating, pinning, editing, and deleting local notes.
 
+The lock button toggles persisted Privacy Mode through:
+
+`http://127.0.0.1:8765/settings`
+
 ## Run
 
 ```powershell
@@ -33,4 +37,4 @@ npm run dev
 
 Then open the local Vite URL shown in the terminal.
 
-To see live backend health and save notes, run the backend service first.
+To see live backend health, save notes, and persist Privacy Mode, run the backend service first.

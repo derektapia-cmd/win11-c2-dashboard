@@ -246,6 +246,13 @@ p {
   cursor: pointer;
 }
 
+.icon-button.active {
+  border-color: rgba(0, 214, 139, 0.5);
+  color: #04d68b;
+  background: rgba(0, 214, 139, 0.13);
+  box-shadow: 0 0 20px rgba(0, 214, 139, 0.2);
+}
+
 .primary-action {
   padding: 0 18px;
   border: 1px solid rgba(0, 214, 139, 0.58);
@@ -695,6 +702,10 @@ p {
   font-weight: 700;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.privacy-mode .note-preview p {
+  color: #04d68b;
 }
 
 .note-actions {

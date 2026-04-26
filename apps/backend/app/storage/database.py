@@ -28,6 +28,15 @@ def init_database() -> None:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
         connection.commit()
 
 
@@ -41,4 +50,3 @@ def get_connection() -> Iterator[sqlite3.Connection]:
         yield connection
     finally:
         connection.close()
-

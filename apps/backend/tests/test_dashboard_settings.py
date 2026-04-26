@@ -1,0 +1,49 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from app.core.settings import settings
+from app.main import app
+from app.storage.database import init_database
+
+
+@pytest.fixture(autouse=True)
+def isolated_settings_database(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "database_path", tmp_path / "test-dashboard.sqlite3")
+    init_database()
+
+
+def test_settings_default_privacy_mode_is_off() -> None:
+    client = TestClient(app)
+
+    response = client.get("/settings")
+
+    assert response.status_code == 200
+    assert response.json() == {"privacy_mode": False}
+
+
+def test_settings_privacy_mode_can_be_updated_and_loaded() -> None:
+    client = TestClient(app)
+
+    update_response = client.patch("/settings", json={"privacy_mode": True})
+    load_response = client.get("/settings")
+
+    assert update_response.status_code == 200
+    assert update_response.json() == {"privacy_mode": True}
+    assert load_response.status_code == 200
+    assert load_response.json() == {"privacy_mode": True}
+
+
+def test_settings_patch_allows_local_renderer_origin() -> None:
+    client = TestClient(app)
+
+    response = client.options(
+        "/settings",
+        headers={
+            "Origin": "http://127.0.0.1:5173",
+            "Access-Control-Request-Method": "PATCH",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+
