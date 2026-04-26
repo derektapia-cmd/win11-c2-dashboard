@@ -12,6 +12,8 @@ import {
   LayoutDashboard,
   Lock,
   Mail,
+  Maximize2,
+  Minimize2,
   Newspaper,
   NotebookPen,
   Pencil,
@@ -70,12 +72,15 @@ type NotesState = {
 
 type DashboardSettingsRecord = {
   privacy_mode: boolean;
+  compact_mode: boolean;
 };
 
 type DashboardSettingsState = {
   status: "checking" | "ready" | "offline" | "saving";
   privacyMode: boolean;
-  detail: string;
+  compactMode: boolean;
+  privacyDetail: string;
+  layoutDetail: string;
 };
 
 type NavItem = {
@@ -347,7 +352,9 @@ function App() {
   const [dashboardSettings, setDashboardSettings] = useState<DashboardSettingsState>({
     status: "checking",
     privacyMode: false,
-    detail: "Loading privacy mode",
+    compactMode: false,
+    privacyDetail: "Loading privacy mode",
+    layoutDetail: "Loading layout mode",
   });
 
   useEffect(() => {
@@ -468,9 +475,13 @@ function App() {
         setDashboardSettings({
           status: "ready",
           privacyMode: loadedSettings.privacy_mode,
-          detail: loadedSettings.privacy_mode
+          compactMode: loadedSettings.compact_mode,
+          privacyDetail: loadedSettings.privacy_mode
             ? "Note previews hidden"
             : "Note previews visible",
+          layoutDetail: loadedSettings.compact_mode
+            ? "Dense dashboard layout"
+            : "Comfortable dashboard layout",
         });
       } catch {
         if (!isMounted) {
@@ -480,7 +491,9 @@ function App() {
         setDashboardSettings({
           status: "offline",
           privacyMode: false,
-          detail: "Settings unavailable",
+          compactMode: false,
+          privacyDetail: "Settings unavailable",
+          layoutDetail: "Settings unavailable",
         });
       }
     }
@@ -620,7 +633,7 @@ function App() {
       ...current,
       status: "saving",
       privacyMode: nextPrivacyMode,
-      detail: nextPrivacyMode ? "Turning privacy mode on" : "Turning privacy mode off",
+      privacyDetail: nextPrivacyMode ? "Turning privacy mode on" : "Turning privacy mode off",
     }));
 
     try {
@@ -631,16 +644,60 @@ function App() {
       setDashboardSettings({
         status: "ready",
         privacyMode: savedSettings.privacy_mode,
-        detail: savedSettings.privacy_mode
+        compactMode: savedSettings.compact_mode,
+        privacyDetail: savedSettings.privacy_mode
           ? "Note previews hidden"
           : "Note previews visible",
+        layoutDetail: savedSettings.compact_mode
+          ? "Dense dashboard layout"
+          : "Comfortable dashboard layout",
       });
     } catch {
       setDashboardSettings({
         status: "offline",
         privacyMode: !nextPrivacyMode,
-        detail: "Settings unavailable",
+        compactMode: dashboardSettings.compactMode,
+        privacyDetail: "Settings unavailable",
+        layoutDetail: dashboardSettings.layoutDetail,
       });
+    }
+  }
+
+  async function handleCompactToggle() {
+    const nextCompactMode = !dashboardSettings.compactMode;
+
+    setDashboardSettings((current) => ({
+      ...current,
+      status: "saving",
+      compactMode: nextCompactMode,
+      layoutDetail: nextCompactMode
+        ? "Turning compact mode on"
+        : "Turning compact mode off",
+    }));
+
+    try {
+      const savedSettings = await updateDashboardSettings({
+        compact_mode: nextCompactMode,
+      });
+
+      setDashboardSettings({
+        status: "ready",
+        privacyMode: savedSettings.privacy_mode,
+        compactMode: savedSettings.compact_mode,
+        privacyDetail: savedSettings.privacy_mode
+          ? "Note previews hidden"
+          : "Note previews visible",
+        layoutDetail: savedSettings.compact_mode
+          ? "Dense dashboard layout"
+          : "Comfortable dashboard layout",
+      });
+    } catch {
+      setDashboardSettings((current) => ({
+        ...current,
+        status: "offline",
+        compactMode: !nextCompactMode,
+        layoutDetail: "Settings unavailable",
+      }));
     }
   }
 
@@ -675,17 +732,28 @@ function App() {
     () => ({
       label: "Privacy mode",
       value: dashboardSettings.privacyMode ? "On" : "Off",
-      detail: dashboardSettings.detail,
+      detail: dashboardSettings.privacyDetail,
       tone: dashboardSettings.privacyMode ? "positive" : "neutral",
     }),
-    [dashboardSettings.detail, dashboardSettings.privacyMode],
+    [dashboardSettings.privacyDetail, dashboardSettings.privacyMode],
+  );
+
+  const layoutMetric = useMemo<MetricCard>(
+    () => ({
+      label: "Layout mode",
+      value: dashboardSettings.compactMode ? "Compact" : "Comfort",
+      detail: dashboardSettings.layoutDetail,
+      tone: dashboardSettings.compactMode ? "positive" : "neutral",
+    }),
+    [dashboardSettings.compactMode, dashboardSettings.layoutDetail],
   );
 
   const displayMetrics = useMemo(() => {
     const nextMetrics = [...currentMetrics];
     nextMetrics[3] = privacyMetric;
+    nextMetrics[4] = layoutMetric;
     return nextMetrics;
-  }, [currentMetrics, privacyMetric]);
+  }, [currentMetrics, layoutMetric, privacyMetric]);
 
   const currentModules = useMemo(
     () =>
@@ -707,9 +775,13 @@ function App() {
   return (
     <main
       className={
-        dashboardSettings.privacyMode
-          ? "dashboard-shell privacy-mode"
-          : "dashboard-shell"
+        [
+          "dashboard-shell",
+          dashboardSettings.privacyMode ? "privacy-mode" : "",
+          dashboardSettings.compactMode ? "compact-mode" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
       }
     >
       <aside className="sidebar" aria-label="Dashboard sections">
@@ -774,6 +846,27 @@ function App() {
               type="button"
             >
               {dashboardSettings.privacyMode ? <EyeOff size={17} /> : <Lock size={17} />}
+            </button>
+            <button
+              className={
+                dashboardSettings.compactMode
+                  ? "toolbar-button active"
+                  : "toolbar-button"
+              }
+              onClick={() => void handleCompactToggle()}
+              title={
+                dashboardSettings.compactMode
+                  ? "Switch to comfortable layout"
+                  : "Switch to compact layout"
+              }
+              type="button"
+            >
+              {dashboardSettings.compactMode ? (
+                <Maximize2 size={15} />
+              ) : (
+                <Minimize2 size={15} />
+              )}
+              <span>{dashboardSettings.compactMode ? "Comfort" : "Compact"}</span>
             </button>
             <button className="primary-action" type="button">
               <Plus size={18} />

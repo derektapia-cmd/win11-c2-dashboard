@@ -22,6 +22,7 @@ This checklist starts small and will grow as the app becomes real.
 - [x] Notes can be saved and reloaded locally
 - [x] Notes can be pinned, edited, and deleted locally
 - [x] Settings persist after restart
+- [x] Layout preference persists after refresh
 
 ## Safety
 

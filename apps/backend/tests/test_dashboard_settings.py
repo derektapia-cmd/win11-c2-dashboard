@@ -18,7 +18,7 @@ def test_settings_default_privacy_mode_is_off() -> None:
     response = client.get("/settings")
 
     assert response.status_code == 200
-    assert response.json() == {"privacy_mode": False}
+    assert response.json() == {"privacy_mode": False, "compact_mode": False}
 
 
 def test_settings_privacy_mode_can_be_updated_and_loaded() -> None:
@@ -28,9 +28,21 @@ def test_settings_privacy_mode_can_be_updated_and_loaded() -> None:
     load_response = client.get("/settings")
 
     assert update_response.status_code == 200
-    assert update_response.json() == {"privacy_mode": True}
+    assert update_response.json() == {"privacy_mode": True, "compact_mode": False}
     assert load_response.status_code == 200
-    assert load_response.json() == {"privacy_mode": True}
+    assert load_response.json() == {"privacy_mode": True, "compact_mode": False}
+
+
+def test_settings_compact_mode_can_be_updated_and_loaded() -> None:
+    client = TestClient(app)
+
+    update_response = client.patch("/settings", json={"compact_mode": True})
+    load_response = client.get("/settings")
+
+    assert update_response.status_code == 200
+    assert update_response.json() == {"privacy_mode": False, "compact_mode": True}
+    assert load_response.status_code == 200
+    assert load_response.json() == {"privacy_mode": False, "compact_mode": True}
 
 
 def test_settings_patch_allows_local_renderer_origin() -> None:
@@ -46,4 +58,3 @@ def test_settings_patch_allows_local_renderer_origin() -> None:
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
-

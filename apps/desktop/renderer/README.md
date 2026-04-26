@@ -28,6 +28,8 @@ The lock button toggles persisted Privacy Mode through:
 
 `http://127.0.0.1:8765/settings`
 
+The Compact button toggles a persisted denser dashboard layout through the same endpoint.
+
 ## Run
 
 ```powershell
@@ -37,4 +39,4 @@ npm run dev
 
 Then open the local Vite URL shown in the terminal.
 
-To see live backend health, save notes, and persist Privacy Mode, run the backend service first.
+To see live backend health, save notes, and persist dashboard settings, run the backend service first.

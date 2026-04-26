@@ -20,6 +20,7 @@ def get_dashboard_settings() -> DashboardSettingsResponse:
 
     return DashboardSettingsResponse(
         privacy_mode=bool(stored.get("privacy_mode", DEFAULT_SETTINGS.privacy_mode)),
+        compact_mode=bool(stored.get("compact_mode", DEFAULT_SETTINGS.compact_mode)),
     )
 
 
@@ -47,4 +48,3 @@ def update_dashboard_settings(
         connection.commit()
 
     return updated
-
