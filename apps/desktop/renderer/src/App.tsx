@@ -36,6 +36,7 @@ import {
   placeholderTileCount,
   visibleDashboardTiles,
 } from "./tileRegistry";
+import type { TileStatus } from "./tileRegistry";
 
 type HealthStatus = "checking" | "online" | "offline";
 
@@ -95,6 +96,13 @@ type MetricCard = {
   value: string;
   detail: string;
   tone: "positive" | "neutral" | "warning" | "danger";
+};
+
+const tileStatusLabels: Record<TileStatus, string> = {
+  local: "Local",
+  ready: "Ready",
+  planned: "Planned",
+  offline: "Offline",
 };
 
 const navItems: NavItem[] = [
@@ -198,6 +206,10 @@ function getGreeting(date: Date) {
   }
 
   return "Good evening";
+}
+
+function getTileStatusLabel(status: TileStatus) {
+  return tileStatusLabels[status];
 }
 
 async function requestNotes(signal?: AbortSignal) {
@@ -720,7 +732,7 @@ function App() {
         module.tileId === "notes"
           ? {
               ...module,
-              status: notes.status === "offline" ? "offline" : "local",
+              status: notes.status === "offline" ? ("offline" as const) : ("local" as const),
               summary: notes.summary,
               detail:
                 notes.status === "ready" && notes.items.length > 0
@@ -883,16 +895,23 @@ function App() {
               const Icon = module.icon;
               return (
                 <article
-                  className={
-                    module.status === "local" ? "module-card active" : "module-card"
-                  }
+                  aria-label={`${module.title}: ${getTileStatusLabel(module.status)}`}
+                  className={`module-card status-${module.status}`}
                   key={module.tileId}
                 >
                   <Icon size={17} />
                   <div>
-                    <span>{module.title}</span>
+                    <div className="module-card-topline">
+                      <span>{module.title}</span>
+                      <small className={`tile-status-pill status-${module.status}`}>
+                        {getTileStatusLabel(module.status)}
+                      </small>
+                    </div>
                     <strong>{module.summary}</strong>
                     <p>{module.detail}</p>
+                    <small className="module-source">
+                      {module.status === "offline" ? "Action needed" : module.dataSource}
+                    </small>
                   </div>
                 </article>
               );

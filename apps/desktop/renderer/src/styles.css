@@ -515,6 +515,13 @@ p {
   background: #121212;
 }
 
+.module-card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .compact-mode .module-card {
   min-height: 76px;
   padding: 11px;
@@ -538,14 +545,65 @@ p {
   font-weight: 700;
 }
 
-.module-card.active {
+.module-source {
+  display: block;
+  margin-top: 9px;
+  color: #5f6268;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.tile-status-pill {
+  flex: 0 0 auto;
+  border: 1px solid #303236;
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #191a1b;
+  color: #a6a8ad;
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.module-card.status-local,
+.module-card.status-ready {
   border-color: rgba(0, 214, 139, 0.42);
   background: rgba(0, 214, 139, 0.1);
 }
 
-.module-card.active svg,
-.module-card.active strong {
+.module-card.status-local svg,
+.module-card.status-local strong,
+.module-card.status-ready svg,
+.module-card.status-ready strong,
+.tile-status-pill.status-local,
+.tile-status-pill.status-ready {
   color: #04d68b;
+}
+
+.module-card.status-planned {
+  border-color: rgba(244, 175, 34, 0.22);
+}
+
+.module-card.status-planned svg,
+.tile-status-pill.status-planned {
+  color: #f4af22;
+}
+
+.module-card.status-offline {
+  border-color: rgba(240, 95, 95, 0.42);
+  background: rgba(240, 95, 95, 0.08);
+}
+
+.module-card.status-offline svg,
+.module-card.status-offline strong,
+.tile-status-pill.status-offline {
+  color: #f05f5f;
+}
+
+.module-card.status-offline .module-source {
+  color: #f05f5f;
 }
 
 .lower-dashboard {
