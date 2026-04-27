@@ -25,6 +25,9 @@ def get_dashboard_settings() -> DashboardSettingsResponse:
         visible_tile_ids=list(
             stored.get("visible_tile_ids", DEFAULT_SETTINGS.visible_tile_ids),
         ),
+        tile_order_ids=list(
+            stored.get("tile_order_ids", DEFAULT_SETTINGS.tile_order_ids),
+        ),
     )
 
 
@@ -64,6 +67,9 @@ def update_dashboard_settings(
             if key == "visible_tile_ids":
                 audit_metadata["visible_tile_count"] = len(value)
                 audit_metadata["visible_tile_ids"] = ",".join(value)
+            elif key == "tile_order_ids":
+                audit_metadata["tile_order_count"] = len(value)
+                audit_metadata["tile_order_ids"] = ",".join(value)
             else:
                 audit_metadata[key] = value
 

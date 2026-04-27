@@ -1,4 +1,6 @@
 import {
+  ArrowDown,
+  ArrowUp,
   Bot,
   CalendarDays,
   ChartNoAxesCombined,
@@ -7,6 +9,7 @@ import {
   Download,
   FileText,
   EyeOff,
+  GripVertical,
   LayoutDashboard,
   Lock,
   Mail,
@@ -78,6 +81,7 @@ type DashboardSettingsRecord = {
   privacy_mode: boolean;
   compact_mode: boolean;
   visible_tile_ids: string[];
+  tile_order_ids: string[];
 };
 
 type DashboardSettingsState = {
@@ -85,6 +89,7 @@ type DashboardSettingsState = {
   privacyMode: boolean;
   compactMode: boolean;
   visibleTileIds: string[];
+  tileOrderIds: string[];
   privacyDetail: string;
   layoutDetail: string;
   tileDetail: string;
@@ -145,6 +150,8 @@ const tileStatusLabels: Record<TileStatus, string> = {
 const defaultVisibleTileIds = tileRegistry
   .filter((tile) => tile.visibleByDefault)
   .map((tile) => tile.tileId);
+const defaultTileOrderIds = tileRegistry.map((tile) => tile.tileId);
+const tileById = new Map(tileRegistry.map((tile) => [tile.tileId, tile]));
 
 const navItems: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, active: true },
@@ -287,6 +294,49 @@ function normalizeVisibleTileIds(tileIds: string[]) {
   return normalized.length > 0 ? normalized : defaultVisibleTileIds;
 }
 
+function normalizeTileOrderIds(tileIds: string[]) {
+  const registeredTileIds = new Set(defaultTileOrderIds);
+  const normalized = tileIds.filter(
+    (tileId, index) => registeredTileIds.has(tileId) && tileIds.indexOf(tileId) === index,
+  );
+  const missingTileIds = defaultTileOrderIds.filter((tileId) => !normalized.includes(tileId));
+
+  return [...normalized, ...missingTileIds];
+}
+
+function moveTileId(tileOrderIds: string[], tileId: string, direction: -1 | 1) {
+  const nextTileOrderIds = [...tileOrderIds];
+  const currentIndex = nextTileOrderIds.indexOf(tileId);
+  const nextIndex = currentIndex + direction;
+
+  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= nextTileOrderIds.length) {
+    return tileOrderIds;
+  }
+
+  [nextTileOrderIds[currentIndex], nextTileOrderIds[nextIndex]] = [
+    nextTileOrderIds[nextIndex],
+    nextTileOrderIds[currentIndex],
+  ];
+
+  return nextTileOrderIds;
+}
+
+function reorderTileId(tileOrderIds: string[], draggedTileId: string, targetTileId: string) {
+  if (draggedTileId === targetTileId) {
+    return tileOrderIds;
+  }
+
+  const nextTileOrderIds = tileOrderIds.filter((tileId) => tileId !== draggedTileId);
+  const targetIndex = nextTileOrderIds.indexOf(targetTileId);
+
+  if (targetIndex < 0) {
+    return tileOrderIds;
+  }
+
+  nextTileOrderIds.splice(targetIndex, 0, draggedTileId);
+  return nextTileOrderIds;
+}
+
 async function requestNotes(signal?: AbortSignal) {
   const response = await fetch(notesUrl, { signal });
 
@@ -422,11 +472,13 @@ function App() {
   const [noteBody, setNoteBody] = useState("");
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [isTileSettingsOpen, setIsTileSettingsOpen] = useState(false);
+  const [draggingTileId, setDraggingTileId] = useState<string | null>(null);
   const [dashboardSettings, setDashboardSettings] = useState<DashboardSettingsState>({
     status: "checking",
     privacyMode: false,
     compactMode: false,
     visibleTileIds: defaultVisibleTileIds,
+    tileOrderIds: defaultTileOrderIds,
     privacyDetail: "Loading privacy mode",
     layoutDetail: "Loading layout mode",
     tileDetail: "Loading tile visibility",
@@ -593,6 +645,7 @@ function App() {
           privacyMode: loadedSettings.privacy_mode,
           compactMode: loadedSettings.compact_mode,
           visibleTileIds: normalizeVisibleTileIds(loadedSettings.visible_tile_ids),
+          tileOrderIds: normalizeTileOrderIds(loadedSettings.tile_order_ids),
           privacyDetail: loadedSettings.privacy_mode
             ? "Note previews hidden"
             : "Note previews visible",
@@ -611,6 +664,7 @@ function App() {
           privacyMode: false,
           compactMode: false,
           visibleTileIds: defaultVisibleTileIds,
+          tileOrderIds: defaultTileOrderIds,
           privacyDetail: "Settings unavailable",
           layoutDetail: "Settings unavailable",
           tileDetail: "Settings unavailable",
@@ -841,6 +895,7 @@ function App() {
         privacyMode: savedSettings.privacy_mode,
         compactMode: savedSettings.compact_mode,
         visibleTileIds: normalizeVisibleTileIds(savedSettings.visible_tile_ids),
+        tileOrderIds: normalizeTileOrderIds(savedSettings.tile_order_ids),
         privacyDetail: savedSettings.privacy_mode
           ? "Note previews hidden"
           : "Note previews visible",
@@ -856,6 +911,7 @@ function App() {
         privacyMode: !nextPrivacyMode,
         compactMode: dashboardSettings.compactMode,
         visibleTileIds: dashboardSettings.visibleTileIds,
+        tileOrderIds: dashboardSettings.tileOrderIds,
         privacyDetail: "Settings unavailable",
         layoutDetail: dashboardSettings.layoutDetail,
         tileDetail: dashboardSettings.tileDetail,
@@ -885,6 +941,7 @@ function App() {
         privacyMode: savedSettings.privacy_mode,
         compactMode: savedSettings.compact_mode,
         visibleTileIds: normalizeVisibleTileIds(savedSettings.visible_tile_ids),
+        tileOrderIds: normalizeTileOrderIds(savedSettings.tile_order_ids),
         privacyDetail: savedSettings.privacy_mode
           ? "Note previews hidden"
           : "Note previews visible",
@@ -934,6 +991,7 @@ function App() {
         privacyMode: savedSettings.privacy_mode,
         compactMode: savedSettings.compact_mode,
         visibleTileIds: normalizeVisibleTileIds(savedSettings.visible_tile_ids),
+        tileOrderIds: normalizeTileOrderIds(savedSettings.tile_order_ids),
         privacyDetail: savedSettings.privacy_mode
           ? "Note previews hidden"
           : "Note previews visible",
@@ -950,6 +1008,81 @@ function App() {
         visibleTileIds: currentVisibleTileIds,
         tileDetail: "Settings unavailable",
       }));
+    }
+  }
+
+  async function saveTileOrder(nextTileOrderIds: string[]) {
+    const normalizedTileOrderIds = normalizeTileOrderIds(nextTileOrderIds);
+    const currentTileOrderIds = dashboardSettings.tileOrderIds;
+
+    setDashboardSettings((current) => ({
+      ...current,
+      status: "saving",
+      tileOrderIds: normalizedTileOrderIds,
+      tileDetail: "Saving tile order",
+    }));
+
+    try {
+      const savedSettings = await updateDashboardSettings({
+        tile_order_ids: normalizedTileOrderIds,
+      });
+
+      setDashboardSettings({
+        status: "ready",
+        privacyMode: savedSettings.privacy_mode,
+        compactMode: savedSettings.compact_mode,
+        visibleTileIds: normalizeVisibleTileIds(savedSettings.visible_tile_ids),
+        tileOrderIds: normalizeTileOrderIds(savedSettings.tile_order_ids),
+        privacyDetail: savedSettings.privacy_mode
+          ? "Note previews hidden"
+          : "Note previews visible",
+        layoutDetail: savedSettings.compact_mode
+          ? "Dense dashboard layout"
+          : "Comfortable dashboard layout",
+        tileDetail: "Tile order saved",
+      });
+      void refreshAuditLog();
+    } catch {
+      setDashboardSettings((current) => ({
+        ...current,
+        status: "offline",
+        tileOrderIds: currentTileOrderIds,
+        tileDetail: "Settings unavailable",
+      }));
+    }
+  }
+
+  function handleTileDragStart(tileId: string) {
+    setDraggingTileId(tileId);
+  }
+
+  function handleTileDragEnd() {
+    setDraggingTileId(null);
+  }
+
+  function handleTileDrop(targetTileId: string) {
+    if (!draggingTileId) {
+      return;
+    }
+
+    const nextTileOrderIds = reorderTileId(
+      dashboardSettings.tileOrderIds,
+      draggingTileId,
+      targetTileId,
+    );
+
+    setDraggingTileId(null);
+
+    if (nextTileOrderIds !== dashboardSettings.tileOrderIds) {
+      void saveTileOrder(nextTileOrderIds);
+    }
+  }
+
+  function handleTileMove(tileId: string, direction: -1 | 1) {
+    const nextTileOrderIds = moveTileId(dashboardSettings.tileOrderIds, tileId, direction);
+
+    if (nextTileOrderIds !== dashboardSettings.tileOrderIds) {
+      void saveTileOrder(nextTileOrderIds);
     }
   }
 
@@ -1017,10 +1150,17 @@ function App() {
     () => new Set(dashboardSettings.visibleTileIds),
     [dashboardSettings.visibleTileIds],
   );
+  const orderedTiles = useMemo(
+    () =>
+      dashboardSettings.tileOrderIds
+        .map((tileId) => tileById.get(tileId))
+        .filter((tile): tile is NonNullable<typeof tile> => Boolean(tile)),
+    [dashboardSettings.tileOrderIds],
+  );
 
   const currentModules = useMemo(
     () =>
-      tileRegistry
+      orderedTiles
         .filter((module) => visibleTileIdSet.has(module.tileId))
         .map((module) =>
           module.tileId === "notes"
@@ -1035,7 +1175,7 @@ function App() {
               }
             : module,
         ),
-    [notes.detail, notes.items, notes.status, notes.summary, visibleTileIdSet],
+    [notes.detail, notes.items, notes.status, notes.summary, orderedTiles, visibleTileIdSet],
   );
 
   return (
@@ -1229,12 +1369,24 @@ function App() {
               </header>
 
               <div className="tile-settings-grid" aria-label="Tile visibility controls">
-                {tileRegistry.map((tile) => {
+                {orderedTiles.map((tile, index) => {
                   const Icon = tile.icon;
                   const isVisible = visibleTileIdSet.has(tile.tileId);
 
                   return (
-                    <label className="tile-toggle" key={tile.tileId}>
+                    <label
+                      className={
+                        draggingTileId === tile.tileId
+                          ? "tile-toggle dragging"
+                          : "tile-toggle"
+                      }
+                      draggable
+                      key={tile.tileId}
+                      onDragEnd={handleTileDragEnd}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDragStart={() => handleTileDragStart(tile.tileId)}
+                      onDrop={() => handleTileDrop(tile.tileId)}
+                    >
                       <input
                         checked={isVisible}
                         disabled={isVisible && dashboardSettings.visibleTileIds.length === 1}
@@ -1246,6 +1398,31 @@ function App() {
                       <span className="tile-toggle-copy">
                         <strong>{tile.title}</strong>
                         <small>{tile.summary}</small>
+                      </span>
+                      <span className="tile-reorder-actions">
+                        <GripVertical size={14} />
+                        <button
+                          aria-label={`Move ${tile.title} earlier`}
+                          disabled={index === 0}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            handleTileMove(tile.tileId, -1);
+                          }}
+                          type="button"
+                        >
+                          <ArrowUp size={13} />
+                        </button>
+                        <button
+                          aria-label={`Move ${tile.title} later`}
+                          disabled={index === orderedTiles.length - 1}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            handleTileMove(tile.tileId, 1);
+                          }}
+                          type="button"
+                        >
+                          <ArrowDown size={13} />
+                        </button>
                       </span>
                     </label>
                   );

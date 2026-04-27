@@ -638,7 +638,7 @@ p {
 
 .tile-toggle {
   display: grid;
-  grid-template-columns: 34px 20px minmax(0, 1fr);
+  grid-template-columns: 34px 20px minmax(0, 1fr) auto;
   gap: 9px;
   align-items: center;
   min-height: 74px;
@@ -652,6 +652,11 @@ p {
 .tile-toggle:has(input:checked) {
   border-color: rgba(0, 214, 139, 0.42);
   background: rgba(0, 214, 139, 0.1);
+}
+
+.tile-toggle.dragging {
+  border-color: rgba(244, 175, 34, 0.5);
+  opacity: 0.78;
 }
 
 .tile-toggle:has(input:disabled) {
@@ -723,6 +728,38 @@ p {
   color: #8e9095;
   font-size: 0.7rem;
   font-weight: 800;
+}
+
+.tile-reorder-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #74767c;
+}
+
+.tile-reorder-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #303236;
+  border-radius: 7px;
+  color: #a6a8ad;
+  background: #101010;
+  cursor: pointer;
+}
+
+.tile-reorder-actions button:hover,
+.tile-reorder-actions button:focus-visible {
+  border-color: rgba(0, 214, 139, 0.44);
+  color: #04d68b;
+  outline: none;
+}
+
+.tile-reorder-actions button:disabled {
+  color: #4f5258;
+  cursor: not-allowed;
 }
 
 .lower-dashboard {
