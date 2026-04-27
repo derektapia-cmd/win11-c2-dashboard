@@ -1,5 +1,4 @@
 import {
-  Activity,
   Bot,
   CalendarDays,
   ChartNoAxesCombined,
@@ -8,13 +7,11 @@ import {
   Download,
   FileText,
   EyeOff,
-  Inbox,
   LayoutDashboard,
   Lock,
   Mail,
   Maximize2,
   Minimize2,
-  Newspaper,
   NotebookPen,
   Pencil,
   Pin,
@@ -35,6 +32,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 import "./styles.css";
+import {
+  placeholderTileCount,
+  visibleDashboardTiles,
+} from "./tileRegistry";
 
 type HealthStatus = "checking" | "online" | "offline";
 
@@ -96,14 +97,6 @@ type MetricCard = {
   tone: "positive" | "neutral" | "warning" | "danger";
 };
 
-type ModuleCard = {
-  title: string;
-  status: string;
-  detail: string;
-  icon: LucideIcon;
-  active?: boolean;
-};
-
 const navItems: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, active: true },
   { label: "Calendar", icon: CalendarDays },
@@ -125,8 +118,8 @@ const metrics: MetricCard[] = [
   },
   {
     label: "Active modules",
-    value: "8",
-    detail: "Planned dashboard tiles",
+    value: "0",
+    detail: "Registered dashboard tiles",
     tone: "neutral",
   },
   {
@@ -146,46 +139,6 @@ const metrics: MetricCard[] = [
     value: "3",
     detail: "Automation, calendar, analytics",
     tone: "neutral",
-  },
-];
-
-const baseModules: ModuleCard[] = [
-  {
-    title: "Notes",
-    status: "Local-first",
-    detail: "SQLite-backed notes are ready.",
-    icon: NotebookPen,
-    active: true,
-  },
-  {
-    title: "Gmail",
-    status: "OAuth later",
-    detail: "Unread count, search, drafts, replies.",
-    icon: Inbox,
-  },
-  {
-    title: "Weather",
-    status: "Provider pending",
-    detail: "Forecast, alerts, conditions.",
-    icon: Activity,
-  },
-  {
-    title: "News",
-    status: "RSS planned",
-    detail: "Sources, read state, saved links.",
-    icon: Newspaper,
-  },
-  {
-    title: "Terminal",
-    status: "Warning-gated",
-    detail: "PowerShell with command audit log.",
-    icon: Terminal,
-  },
-  {
-    title: "Wallets",
-    status: "Read-only v1",
-    detail: "MetaMask and Phantom balances.",
-    icon: WalletCards,
   },
 ];
 
@@ -723,6 +676,12 @@ function App() {
               detail: health.detail,
               tone: liveHealthTone,
             }
+          : metric.label === "Active modules"
+            ? {
+                ...metric,
+                value: String(visibleDashboardTiles.length),
+                detail: `${placeholderTileCount} placeholder tiles registered`,
+              }
           : metric,
       ),
     [health.detail, health.summary, liveHealthTone],
@@ -757,11 +716,12 @@ function App() {
 
   const currentModules = useMemo(
     () =>
-      baseModules.map((module) =>
-        module.title === "Notes"
+      visibleDashboardTiles.map((module) =>
+        module.tileId === "notes"
           ? {
               ...module,
-              status: notes.summary,
+              status: notes.status === "offline" ? "offline" : "local",
+              summary: notes.summary,
               detail:
                 notes.status === "ready" && notes.items.length > 0
                   ? `Latest: ${notes.items[0].title}`
@@ -922,11 +882,16 @@ function App() {
             {currentModules.map((module) => {
               const Icon = module.icon;
               return (
-                <article className={module.active ? "module-card active" : "module-card"} key={module.title}>
+                <article
+                  className={
+                    module.status === "local" ? "module-card active" : "module-card"
+                  }
+                  key={module.tileId}
+                >
                   <Icon size={17} />
                   <div>
                     <span>{module.title}</span>
-                    <strong>{module.status}</strong>
+                    <strong>{module.summary}</strong>
                     <p>{module.detail}</p>
                   </div>
                 </article>

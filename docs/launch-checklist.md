@@ -18,7 +18,7 @@ This checklist starts small and will grow as the app becomes real.
 - [x] Frontend opens locally
 - [x] Dashboard shell renders
 - [x] Dashboard reads backend health endpoint
-- [ ] Tile registry loads placeholder tiles
+- [x] Tile registry loads placeholder tiles
 - [x] Notes can be saved and reloaded locally
 - [x] Notes can be pinned, edited, and deleted locally
 - [x] Settings persist after restart
