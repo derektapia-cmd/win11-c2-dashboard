@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timezone
 
 from app.models.dashboard_settings import DashboardSettingsResponse, DashboardSettingsUpdate
+from app.services.audit_log import record_audit_event
 from app.storage.database import get_connection
 
 DEFAULT_SETTINGS = DashboardSettingsResponse()
@@ -28,9 +29,15 @@ def update_dashboard_settings(
     settings_update: DashboardSettingsUpdate,
 ) -> DashboardSettingsResponse:
     current = get_dashboard_settings()
+    requested_updates = settings_update.model_dump(exclude_none=True)
     updated = current.model_copy(
-        update=settings_update.model_dump(exclude_none=True),
+        update=requested_updates,
     )
+    changed_settings = {
+        key: value
+        for key, value in requested_updates.items()
+        if getattr(current, key) != value
+    }
     now = datetime.now(timezone.utc).isoformat()
 
     with get_connection() as connection:
@@ -46,5 +53,16 @@ def update_dashboard_settings(
                 (key, json.dumps(value), now),
             )
         connection.commit()
+
+    if changed_settings:
+        record_audit_event(
+            action="settings.update.completed",
+            target="settings:dashboard",
+            summary="Dashboard settings were updated.",
+            metadata={
+                "tile": "settings",
+                **changed_settings,
+            },
+        )
 
     return updated

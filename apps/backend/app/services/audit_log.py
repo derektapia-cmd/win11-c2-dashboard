@@ -4,6 +4,7 @@ from sqlite3 import Row
 from uuid import uuid4
 
 from app.models.audit_log import AuditLogCreate, AuditLogResponse
+from app.models.audit_log import AuditRiskLevel, AuditStatus
 from app.storage.database import get_connection
 
 
@@ -60,6 +61,29 @@ def create_audit_entry(entry: AuditLogCreate) -> AuditLogResponse:
         summary=entry.summary.strip(),
         metadata=entry.metadata,
         created_at=now,
+    )
+
+
+def record_audit_event(
+    *,
+    action: str,
+    summary: str,
+    target: str = "dashboard",
+    actor: str = "local-user",
+    risk_level: AuditRiskLevel = "low",
+    status: AuditStatus = "completed",
+    metadata: dict[str, str | int | float | bool | None] | None = None,
+) -> AuditLogResponse:
+    return create_audit_entry(
+        AuditLogCreate(
+            action=action,
+            actor=actor,
+            target=target,
+            risk_level=risk_level,
+            status=status,
+            summary=summary,
+            metadata=metadata or {},
+        ),
     )
 
 

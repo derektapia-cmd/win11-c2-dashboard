@@ -33,6 +33,29 @@ def test_settings_privacy_mode_can_be_updated_and_loaded() -> None:
     assert load_response.json() == {"privacy_mode": True, "compact_mode": False}
 
 
+def test_settings_update_writes_audit_entry() -> None:
+    client = TestClient(app)
+
+    update_response = client.patch(
+        "/settings",
+        json={
+            "privacy_mode": True,
+            "compact_mode": True,
+        },
+    )
+    audit_response = client.get("/audit-log")
+
+    assert update_response.status_code == 200
+    entries = audit_response.json()
+    assert entries[0]["action"] == "settings.update.completed"
+    assert entries[0]["target"] == "settings:dashboard"
+    assert entries[0]["metadata"] == {
+        "tile": "settings",
+        "privacy_mode": True,
+        "compact_mode": True,
+    }
+
+
 def test_settings_compact_mode_can_be_updated_and_loaded() -> None:
     client = TestClient(app)
 

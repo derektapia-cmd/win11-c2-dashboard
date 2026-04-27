@@ -25,6 +25,11 @@ OAuth refresh tokens and API keys should use OS-protected secure storage where p
 
 The backend should log security-relevant events such as email send, wallet connect/disconnect, API key changes, terminal commands, notes export, and settings changes.
 
+Current local audit coverage:
+
+- Notes create, update, and delete actions are logged without note body content.
+- Dashboard settings changes are logged with the changed setting values.
+
 ## Secret Scanning
 
 Run the committed-file scanner before release checkpoints:

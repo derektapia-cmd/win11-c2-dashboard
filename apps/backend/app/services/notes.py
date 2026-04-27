@@ -4,6 +4,7 @@ from sqlite3 import Row
 from uuid import uuid4
 
 from app.models.note import NoteCreate, NoteResponse, NoteUpdate
+from app.services.audit_log import record_audit_event
 from app.storage.database import get_connection
 
 
@@ -44,6 +45,18 @@ def create_note(note: NoteCreate) -> NoteResponse:
         )
         connection.commit()
 
+    record_audit_event(
+        action="note.create.completed",
+        target=f"note:{note_id}",
+        summary="Local note was created.",
+        metadata={
+            "tile": "notes",
+            "title_length": len(title),
+            "tags_count": len(tags),
+            "pinned": note.pinned,
+        },
+    )
+
     return NoteResponse(
         id=note_id,
         title=title,
@@ -79,6 +92,17 @@ def update_note(note_id: str, note: NoteUpdate) -> NoteResponse | None:
     if note.pinned is not None:
         pinned = note.pinned
 
+    changed_fields = [
+        field
+        for field, new_value, old_value in (
+            ("title", title, existing.title),
+            ("body", body, existing.body),
+            ("tags", tags, existing.tags),
+            ("pinned", pinned, existing.pinned),
+        )
+        if new_value != old_value
+    ]
+
     with get_connection() as connection:
         connection.execute(
             """
@@ -97,15 +121,47 @@ def update_note(note_id: str, note: NoteUpdate) -> NoteResponse | None:
         )
         connection.commit()
 
+    if changed_fields:
+        record_audit_event(
+            action="note.update.completed",
+            target=f"note:{note_id}",
+            summary="Local note was updated.",
+            metadata={
+                "tile": "notes",
+                "changed_fields": ",".join(changed_fields),
+                "pinned": pinned,
+            },
+        )
+
     return get_note(note_id)
 
 
 def delete_note(note_id: str) -> bool:
+    existing = get_note(note_id)
+
+    if existing is None:
+        return False
+
     with get_connection() as connection:
         cursor = connection.execute("DELETE FROM notes WHERE id = ?", (note_id,))
         connection.commit()
 
-    return cursor.rowcount > 0
+    was_deleted = cursor.rowcount > 0
+
+    if was_deleted:
+        record_audit_event(
+            action="note.delete.completed",
+            target=f"note:{note_id}",
+            risk_level="medium",
+            summary="Local note was deleted.",
+            metadata={
+                "tile": "notes",
+                "title_length": len(existing.title),
+                "pinned": existing.pinned,
+            },
+        )
+
+    return was_deleted
 
 
 def get_note(note_id: str) -> NoteResponse | None:
