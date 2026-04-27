@@ -296,6 +296,7 @@ p {
 .calendar-panel,
 .notes-panel,
 .audit-panel,
+.tile-settings-panel,
 .today-card,
 .progress-card {
   border: 1px solid #282a2b;
@@ -607,6 +608,123 @@ p {
   color: #f05f5f;
 }
 
+.tile-settings-panel {
+  margin-top: 24px;
+}
+
+.compact-mode .tile-settings-panel {
+  margin-top: 16px;
+}
+
+.tile-settings-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(0, 214, 139, 0.28);
+  border-radius: 999px;
+  color: #04d68b;
+  background: rgba(0, 214, 139, 0.1);
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.tile-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tile-toggle {
+  display: grid;
+  grid-template-columns: 34px 20px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-height: 74px;
+  padding: 11px;
+  border: 1px solid #282a2b;
+  border-radius: 8px;
+  background: #171717;
+  cursor: pointer;
+}
+
+.tile-toggle:has(input:checked) {
+  border-color: rgba(0, 214, 139, 0.42);
+  background: rgba(0, 214, 139, 0.1);
+}
+
+.tile-toggle:has(input:disabled) {
+  cursor: default;
+}
+
+.tile-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tile-toggle > svg {
+  justify-self: center;
+  color: #74767c;
+}
+
+.tile-toggle:has(input:checked) > svg {
+  color: #04d68b;
+}
+
+.tile-toggle-control {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #3a3d40;
+  border-radius: 6px;
+  background: #101010;
+}
+
+.tile-toggle-control::after {
+  position: absolute;
+  inset: 4px;
+  border-radius: 3px;
+  background: #04d68b;
+  content: "";
+  opacity: 0;
+}
+
+.tile-toggle:has(input:checked) .tile-toggle-control {
+  border-color: rgba(0, 214, 139, 0.58);
+}
+
+.tile-toggle:has(input:checked) .tile-toggle-control::after {
+  opacity: 1;
+}
+
+.tile-toggle-copy {
+  min-width: 0;
+}
+
+.tile-toggle-copy strong,
+.tile-toggle-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tile-toggle-copy strong {
+  color: #ffffff;
+  font-size: 0.82rem;
+}
+
+.tile-toggle-copy small {
+  margin-top: 3px;
+  color: #8e9095;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
 .lower-dashboard {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
@@ -622,7 +740,8 @@ p {
 .progress-panel,
 .calendar-panel,
 .notes-panel,
-.audit-panel {
+.audit-panel,
+.tile-settings-panel {
   min-height: 240px;
   padding: 18px;
   border-top-color: rgba(0, 214, 139, 0.62);
@@ -634,7 +753,8 @@ p {
 .compact-mode .progress-panel,
 .compact-mode .calendar-panel,
 .compact-mode .notes-panel,
-.compact-mode .audit-panel {
+.compact-mode .audit-panel,
+.compact-mode .tile-settings-panel {
   min-height: 210px;
   padding: 14px;
 }
@@ -1159,6 +1279,10 @@ p {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .tile-settings-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .audit-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1242,6 +1366,7 @@ p {
   .metric-grid,
   .mini-grid,
   .progress-grid,
+  .tile-settings-grid,
   .audit-list {
     grid-template-columns: 1fr;
   }

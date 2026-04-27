@@ -22,6 +22,9 @@ def get_dashboard_settings() -> DashboardSettingsResponse:
     return DashboardSettingsResponse(
         privacy_mode=bool(stored.get("privacy_mode", DEFAULT_SETTINGS.privacy_mode)),
         compact_mode=bool(stored.get("compact_mode", DEFAULT_SETTINGS.compact_mode)),
+        visible_tile_ids=list(
+            stored.get("visible_tile_ids", DEFAULT_SETTINGS.visible_tile_ids),
+        ),
     )
 
 
@@ -55,14 +58,20 @@ def update_dashboard_settings(
         connection.commit()
 
     if changed_settings:
+        audit_metadata: dict[str, str | int | float | bool | None] = {"tile": "settings"}
+
+        for key, value in changed_settings.items():
+            if key == "visible_tile_ids":
+                audit_metadata["visible_tile_count"] = len(value)
+                audit_metadata["visible_tile_ids"] = ",".join(value)
+            else:
+                audit_metadata[key] = value
+
         record_audit_event(
             action="settings.update.completed",
             target="settings:dashboard",
             summary="Dashboard settings were updated.",
-            metadata={
-                "tile": "settings",
-                **changed_settings,
-            },
+            metadata=audit_metadata,
         )
 
     return updated

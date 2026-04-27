@@ -36,7 +36,7 @@ import type { FormEvent } from "react";
 import "./styles.css";
 import {
   placeholderTileCount,
-  visibleDashboardTiles,
+  tileRegistry,
 } from "./tileRegistry";
 import type { TileStatus } from "./tileRegistry";
 
@@ -77,14 +77,17 @@ type NotesState = {
 type DashboardSettingsRecord = {
   privacy_mode: boolean;
   compact_mode: boolean;
+  visible_tile_ids: string[];
 };
 
 type DashboardSettingsState = {
   status: "checking" | "ready" | "offline" | "saving";
   privacyMode: boolean;
   compactMode: boolean;
+  visibleTileIds: string[];
   privacyDetail: string;
   layoutDetail: string;
+  tileDetail: string;
 };
 
 type AuditRiskLevel = "low" | "medium" | "high" | "critical";
@@ -138,6 +141,10 @@ const tileStatusLabels: Record<TileStatus, string> = {
   planned: "Planned",
   offline: "Offline",
 };
+
+const defaultVisibleTileIds = tileRegistry
+  .filter((tile) => tile.visibleByDefault)
+  .map((tile) => tile.tileId);
 
 const navItems: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, active: true },
@@ -271,6 +278,13 @@ function formatAuditAction(action: string) {
 
 function formatAuditStatus(status: AuditStatus) {
   return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function normalizeVisibleTileIds(tileIds: string[]) {
+  const registeredTileIds = new Set(tileRegistry.map((tile) => tile.tileId));
+  const normalized = tileIds.filter((tileId) => registeredTileIds.has(tileId));
+
+  return normalized.length > 0 ? normalized : defaultVisibleTileIds;
 }
 
 async function requestNotes(signal?: AbortSignal) {
@@ -407,12 +421,15 @@ function App() {
   const [noteTitle, setNoteTitle] = useState("");
   const [noteBody, setNoteBody] = useState("");
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [isTileSettingsOpen, setIsTileSettingsOpen] = useState(false);
   const [dashboardSettings, setDashboardSettings] = useState<DashboardSettingsState>({
     status: "checking",
     privacyMode: false,
     compactMode: false,
+    visibleTileIds: defaultVisibleTileIds,
     privacyDetail: "Loading privacy mode",
     layoutDetail: "Loading layout mode",
+    tileDetail: "Loading tile visibility",
   });
   const [auditLog, setAuditLog] = useState<AuditLogState>({
     status: "checking",
@@ -575,12 +592,14 @@ function App() {
           status: "ready",
           privacyMode: loadedSettings.privacy_mode,
           compactMode: loadedSettings.compact_mode,
+          visibleTileIds: normalizeVisibleTileIds(loadedSettings.visible_tile_ids),
           privacyDetail: loadedSettings.privacy_mode
             ? "Note previews hidden"
             : "Note previews visible",
           layoutDetail: loadedSettings.compact_mode
             ? "Dense dashboard layout"
             : "Comfortable dashboard layout",
+          tileDetail: "Tile visibility loaded",
         });
       } catch {
         if (!isMounted) {
@@ -591,8 +610,10 @@ function App() {
           status: "offline",
           privacyMode: false,
           compactMode: false,
+          visibleTileIds: defaultVisibleTileIds,
           privacyDetail: "Settings unavailable",
           layoutDetail: "Settings unavailable",
+          tileDetail: "Settings unavailable",
         });
       }
     }
@@ -819,12 +840,14 @@ function App() {
         status: "ready",
         privacyMode: savedSettings.privacy_mode,
         compactMode: savedSettings.compact_mode,
+        visibleTileIds: normalizeVisibleTileIds(savedSettings.visible_tile_ids),
         privacyDetail: savedSettings.privacy_mode
           ? "Note previews hidden"
           : "Note previews visible",
         layoutDetail: savedSettings.compact_mode
           ? "Dense dashboard layout"
           : "Comfortable dashboard layout",
+        tileDetail: "Tile visibility loaded",
       });
       void refreshAuditLog();
     } catch {
@@ -832,8 +855,10 @@ function App() {
         status: "offline",
         privacyMode: !nextPrivacyMode,
         compactMode: dashboardSettings.compactMode,
+        visibleTileIds: dashboardSettings.visibleTileIds,
         privacyDetail: "Settings unavailable",
         layoutDetail: dashboardSettings.layoutDetail,
+        tileDetail: dashboardSettings.tileDetail,
       });
     }
   }
@@ -859,12 +884,14 @@ function App() {
         status: "ready",
         privacyMode: savedSettings.privacy_mode,
         compactMode: savedSettings.compact_mode,
+        visibleTileIds: normalizeVisibleTileIds(savedSettings.visible_tile_ids),
         privacyDetail: savedSettings.privacy_mode
           ? "Note previews hidden"
           : "Note previews visible",
         layoutDetail: savedSettings.compact_mode
           ? "Dense dashboard layout"
           : "Comfortable dashboard layout",
+        tileDetail: "Tile visibility loaded",
       });
       void refreshAuditLog();
     } catch {
@@ -873,6 +900,55 @@ function App() {
         status: "offline",
         compactMode: !nextCompactMode,
         layoutDetail: "Settings unavailable",
+      }));
+    }
+  }
+
+  async function handleTileVisibilityToggle(tileId: string) {
+    const currentVisibleTileIds = dashboardSettings.visibleTileIds;
+    const isCurrentlyVisible = currentVisibleTileIds.includes(tileId);
+
+    if (isCurrentlyVisible && currentVisibleTileIds.length === 1) {
+      return;
+    }
+
+    const nextVisibleTileIds = currentVisibleTileIds.includes(tileId)
+      ? currentVisibleTileIds.filter((currentTileId) => currentTileId !== tileId)
+      : [...currentVisibleTileIds, tileId];
+    const normalizedVisibleTileIds = normalizeVisibleTileIds(nextVisibleTileIds);
+
+    setDashboardSettings((current) => ({
+      ...current,
+      status: "saving",
+      visibleTileIds: normalizedVisibleTileIds,
+      tileDetail: "Saving tile visibility",
+    }));
+
+    try {
+      const savedSettings = await updateDashboardSettings({
+        visible_tile_ids: normalizedVisibleTileIds,
+      });
+
+      setDashboardSettings({
+        status: "ready",
+        privacyMode: savedSettings.privacy_mode,
+        compactMode: savedSettings.compact_mode,
+        visibleTileIds: normalizeVisibleTileIds(savedSettings.visible_tile_ids),
+        privacyDetail: savedSettings.privacy_mode
+          ? "Note previews hidden"
+          : "Note previews visible",
+        layoutDetail: savedSettings.compact_mode
+          ? "Dense dashboard layout"
+          : "Comfortable dashboard layout",
+        tileDetail: "Tile visibility saved",
+      });
+      void refreshAuditLog();
+    } catch {
+      setDashboardSettings((current) => ({
+        ...current,
+        status: "offline",
+        visibleTileIds: currentVisibleTileIds,
+        tileDetail: "Settings unavailable",
       }));
     }
   }
@@ -902,12 +978,12 @@ function App() {
           : metric.label === "Active modules"
             ? {
                 ...metric,
-                value: String(visibleDashboardTiles.length),
-                detail: `${placeholderTileCount} placeholder tiles registered`,
+                value: String(dashboardSettings.visibleTileIds.length),
+                detail: `${placeholderTileCount} placeholder tiles available`,
               }
           : metric,
       ),
-    [health.detail, health.summary, liveHealthTone],
+    [dashboardSettings.visibleTileIds.length, health.detail, health.summary, liveHealthTone],
   );
 
   const privacyMetric = useMemo<MetricCard>(
@@ -937,22 +1013,29 @@ function App() {
     return nextMetrics;
   }, [currentMetrics, layoutMetric, privacyMetric]);
 
+  const visibleTileIdSet = useMemo(
+    () => new Set(dashboardSettings.visibleTileIds),
+    [dashboardSettings.visibleTileIds],
+  );
+
   const currentModules = useMemo(
     () =>
-      visibleDashboardTiles.map((module) =>
-        module.tileId === "notes"
-          ? {
-              ...module,
-              status: notes.status === "offline" ? ("offline" as const) : ("local" as const),
-              summary: notes.summary,
-              detail:
-                notes.status === "ready" && notes.items.length > 0
-                  ? `Latest: ${notes.items[0].title}`
-                  : notes.detail,
-            }
-          : module,
-      ),
-    [notes.detail, notes.items, notes.status, notes.summary],
+      tileRegistry
+        .filter((module) => visibleTileIdSet.has(module.tileId))
+        .map((module) =>
+          module.tileId === "notes"
+            ? {
+                ...module,
+                status: notes.status === "offline" ? ("offline" as const) : ("local" as const),
+                summary: notes.summary,
+                detail:
+                  notes.status === "ready" && notes.items.length > 0
+                    ? `Latest: ${notes.items[0].title}`
+                    : notes.detail,
+              }
+            : module,
+        ),
+    [notes.detail, notes.items, notes.status, notes.summary, visibleTileIdSet],
   );
 
   return (
@@ -1051,7 +1134,11 @@ function App() {
               )}
               <span>{dashboardSettings.compactMode ? "Comfort" : "Compact"}</span>
             </button>
-            <button className="primary-action" type="button">
+            <button
+              className="primary-action"
+              onClick={() => setIsTileSettingsOpen((current) => !current)}
+              type="button"
+            >
               <Plus size={18} />
               <span>Add Tile</span>
             </button>
@@ -1128,6 +1215,44 @@ function App() {
               );
             })}
           </section>
+
+          {isTileSettingsOpen ? (
+            <section className="tile-settings-panel">
+              <header className="panel-heading">
+                <div>
+                  <Settings size={15} />
+                  <h2>Tile Settings</h2>
+                </div>
+                <span className="tile-settings-status">
+                  {dashboardSettings.visibleTileIds.length} visible
+                </span>
+              </header>
+
+              <div className="tile-settings-grid" aria-label="Tile visibility controls">
+                {tileRegistry.map((tile) => {
+                  const Icon = tile.icon;
+                  const isVisible = visibleTileIdSet.has(tile.tileId);
+
+                  return (
+                    <label className="tile-toggle" key={tile.tileId}>
+                      <input
+                        checked={isVisible}
+                        disabled={isVisible && dashboardSettings.visibleTileIds.length === 1}
+                        onChange={() => void handleTileVisibilityToggle(tile.tileId)}
+                        type="checkbox"
+                      />
+                      <span className="tile-toggle-control" />
+                      <Icon size={16} />
+                      <span className="tile-toggle-copy">
+                        <strong>{tile.title}</strong>
+                        <small>{tile.summary}</small>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
 
           <section className={`audit-panel audit-${auditLog.status}`}>
             <header className="panel-heading">
