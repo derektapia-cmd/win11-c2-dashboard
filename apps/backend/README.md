@@ -41,6 +41,7 @@ Then open:
 - Health check: `http://127.0.0.1:8765/health`
 - Notes API: `http://127.0.0.1:8765/notes`
 - Settings API: `http://127.0.0.1:8765/settings`
+- Audit log API: `http://127.0.0.1:8765/audit-log`
 - API docs: `http://127.0.0.1:8765/docs`
 
 ## Beginner Checkpoint
