@@ -32,6 +32,8 @@ The Compact button toggles a persisted denser dashboard layout through the same 
 
 ## Run
 
+Optional `VITE_*` endpoint overrides are documented in the root `.env.example`.
+
 ```powershell
 npm install
 npm run dev

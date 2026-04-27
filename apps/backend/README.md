@@ -30,6 +30,8 @@ For local test tools:
 
 ## Run
 
+Optional local overrides are documented in the root `.env.example`. Set them in the shell before starting the backend if you need to move the SQLite database or allowed renderer origins.
+
 ```powershell
 .\.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8765 --reload
 ```
