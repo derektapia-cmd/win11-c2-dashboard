@@ -102,6 +102,16 @@ type AuditLogRecord = {
   created_at: string;
 };
 
+type AuditLogCreateRequest = {
+  action: string;
+  actor?: string;
+  target?: string;
+  risk_level?: AuditRiskLevel;
+  status?: AuditStatus;
+  summary: string;
+  metadata?: Record<string, string | number | boolean | null>;
+};
+
 type AuditLogState = {
   status: "checking" | "ready" | "offline";
   summary: string;
@@ -357,6 +367,28 @@ async function requestAuditLog(signal?: AbortSignal) {
   }
 
   return (await response.json()) as AuditLogRecord[];
+}
+
+async function createAuditLogEntry(payload: AuditLogCreateRequest) {
+  const response = await fetch(auditLogUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Audit log save failed with HTTP ${response.status}`);
+  }
+}
+
+async function createBestEffortAuditLogEntry(payload: AuditLogCreateRequest) {
+  try {
+    await createAuditLogEntry(payload);
+  } catch {
+    // Audit logging should not block the user action it is observing.
+  }
 }
 
 function App() {
@@ -694,11 +726,44 @@ function App() {
   }
 
   async function handleDeleteNote(note: NoteRecord) {
+    const auditMetadata = {
+      tile: "notes",
+      title_length: note.title.length,
+      pinned: note.pinned,
+    };
+
+    await createBestEffortAuditLogEntry({
+      action: "note.delete.requested",
+      target: `note:${note.id}`,
+      risk_level: "medium",
+      status: "requested",
+      summary: "User opened delete confirmation for a local note.",
+      metadata: auditMetadata,
+    });
+
     const confirmed = window.confirm(`Delete "${note.title}"?`);
 
     if (!confirmed) {
+      await createBestEffortAuditLogEntry({
+        action: "note.delete.blocked",
+        target: `note:${note.id}`,
+        risk_level: "medium",
+        status: "blocked",
+        summary: "User cancelled local note deletion.",
+        metadata: auditMetadata,
+      });
+      void refreshAuditLog();
       return;
     }
+
+    await createBestEffortAuditLogEntry({
+      action: "note.delete.approved",
+      target: `note:${note.id}`,
+      risk_level: "medium",
+      status: "approved",
+      summary: "User approved local note deletion.",
+      metadata: auditMetadata,
+    });
 
     setNotes((current) => ({
       ...current,
@@ -717,6 +782,15 @@ function App() {
         cancelEditingNote();
       }
     } catch {
+      await createBestEffortAuditLogEntry({
+        action: "note.delete.failed",
+        target: `note:${note.id}`,
+        risk_level: "medium",
+        status: "failed",
+        summary: "Local note deletion failed after approval.",
+        metadata: auditMetadata,
+      });
+      void refreshAuditLog();
       setNotes((current) => ({
         ...current,
         status: "offline",

@@ -28,6 +28,7 @@ The backend should log security-relevant events such as email send, wallet conne
 Current local audit coverage:
 
 - Notes create, update, and delete actions are logged without note body content.
+- Note delete confirmations log requested, approved, cancelled, and failed attempts.
 - Dashboard settings changes are logged with the changed setting values.
 
 ## Secret Scanning
