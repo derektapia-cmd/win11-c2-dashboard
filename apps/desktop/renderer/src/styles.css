@@ -630,6 +630,40 @@ p {
   white-space: nowrap;
 }
 
+.tile-settings-heading-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tile-reset-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid #303236;
+  border-radius: 8px;
+  color: #a6a8ad;
+  background: #151515;
+  font-size: 0.72rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tile-reset-action:hover,
+.tile-reset-action:focus-visible {
+  border-color: rgba(0, 214, 139, 0.44);
+  color: #04d68b;
+  outline: none;
+}
+
+.tile-reset-action:disabled {
+  color: #55585e;
+  cursor: not-allowed;
+}
+
 .tile-settings-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

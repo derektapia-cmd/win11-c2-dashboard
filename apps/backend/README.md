@@ -9,7 +9,7 @@ The first backend goal is intentionally small:
 - Start a FastAPI app.
 - Answer `GET /health`.
 - Save, list, pin, edit, and delete local notes with SQLite.
-- Persist dashboard settings such as Privacy Mode, Compact Mode, tile visibility, and tile order with SQLite.
+- Persist dashboard settings such as Privacy Mode, Compact Mode, tile visibility, tile order, and layout resets with SQLite.
 - Give the future Electron/React app a local service to talk to.
 
 ## Setup

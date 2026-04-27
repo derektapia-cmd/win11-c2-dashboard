@@ -30,7 +30,7 @@ The lock button toggles persisted Privacy Mode through:
 
 The Compact button toggles a persisted denser dashboard layout through the same endpoint.
 
-The Add Tile button opens tile visibility and ordering controls persisted through the same endpoint.
+The Add Tile button opens tile visibility, ordering, and reset controls persisted through the same endpoint.
 
 The Audit Log panel reads recent local actions from:
 

@@ -148,6 +148,48 @@ def test_settings_tile_order_ids_can_be_updated_and_loaded() -> None:
     }
 
 
+def test_settings_layout_can_be_reset_after_custom_visibility_and_order() -> None:
+    client = TestClient(app)
+
+    client.patch(
+        "/settings",
+        json={
+            "visible_tile_ids": ["terminal", "notes"],
+            "tile_order_ids": ["terminal", "notes", "gmail"],
+        },
+    )
+    reset_response = client.patch(
+        "/settings",
+        json={
+            "visible_tile_ids": DEFAULT_VISIBLE_TILE_IDS,
+            "tile_order_ids": DEFAULT_TILE_ORDER_IDS,
+        },
+    )
+    load_response = client.get("/settings")
+    audit_response = client.get("/audit-log")
+
+    expected_settings = {
+        "privacy_mode": False,
+        "compact_mode": False,
+        "visible_tile_ids": DEFAULT_VISIBLE_TILE_IDS,
+        "tile_order_ids": DEFAULT_TILE_ORDER_IDS,
+    }
+
+    assert reset_response.status_code == 200
+    assert reset_response.json() == expected_settings
+    assert load_response.status_code == 200
+    assert load_response.json() == expected_settings
+    entries = audit_response.json()
+    assert entries[0]["action"] == "settings.update.completed"
+    assert entries[0]["metadata"] == {
+        "tile": "settings",
+        "visible_tile_count": len(DEFAULT_VISIBLE_TILE_IDS),
+        "visible_tile_ids": ",".join(DEFAULT_VISIBLE_TILE_IDS),
+        "tile_order_count": len(DEFAULT_TILE_ORDER_IDS),
+        "tile_order_ids": ",".join(DEFAULT_TILE_ORDER_IDS),
+    }
+
+
 def test_settings_visible_tile_update_writes_compact_audit_metadata() -> None:
     client = TestClient(app)
 

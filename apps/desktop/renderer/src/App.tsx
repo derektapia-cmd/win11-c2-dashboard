@@ -21,6 +21,7 @@ import {
   PinOff,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   Settings,
   Share2,
@@ -302,6 +303,13 @@ function normalizeTileOrderIds(tileIds: string[]) {
   const missingTileIds = defaultTileOrderIds.filter((tileId) => !normalized.includes(tileId));
 
   return [...normalized, ...missingTileIds];
+}
+
+function areTileIdsEqual(leftTileIds: string[], rightTileIds: string[]) {
+  return (
+    leftTileIds.length === rightTileIds.length &&
+    leftTileIds.every((tileId, index) => tileId === rightTileIds[index])
+  );
 }
 
 function moveTileId(tileOrderIds: string[], tileId: string, direction: -1 | 1) {
@@ -1052,6 +1060,59 @@ function App() {
     }
   }
 
+  async function handleResetTileLayout() {
+    const normalizedVisibleTileIds = normalizeVisibleTileIds(defaultVisibleTileIds);
+    const normalizedTileOrderIds = normalizeTileOrderIds(defaultTileOrderIds);
+    const currentVisibleTileIds = dashboardSettings.visibleTileIds;
+    const currentTileOrderIds = dashboardSettings.tileOrderIds;
+
+    if (
+      areTileIdsEqual(currentVisibleTileIds, normalizedVisibleTileIds) &&
+      areTileIdsEqual(currentTileOrderIds, normalizedTileOrderIds)
+    ) {
+      return;
+    }
+
+    setDashboardSettings((current) => ({
+      ...current,
+      status: "saving",
+      visibleTileIds: normalizedVisibleTileIds,
+      tileOrderIds: normalizedTileOrderIds,
+      tileDetail: "Resetting tile layout",
+    }));
+
+    try {
+      const savedSettings = await updateDashboardSettings({
+        visible_tile_ids: normalizedVisibleTileIds,
+        tile_order_ids: normalizedTileOrderIds,
+      });
+
+      setDashboardSettings({
+        status: "ready",
+        privacyMode: savedSettings.privacy_mode,
+        compactMode: savedSettings.compact_mode,
+        visibleTileIds: normalizeVisibleTileIds(savedSettings.visible_tile_ids),
+        tileOrderIds: normalizeTileOrderIds(savedSettings.tile_order_ids),
+        privacyDetail: savedSettings.privacy_mode
+          ? "Note previews hidden"
+          : "Note previews visible",
+        layoutDetail: savedSettings.compact_mode
+          ? "Dense dashboard layout"
+          : "Comfortable dashboard layout",
+        tileDetail: "Default tile layout restored",
+      });
+      void refreshAuditLog();
+    } catch {
+      setDashboardSettings((current) => ({
+        ...current,
+        status: "offline",
+        visibleTileIds: currentVisibleTileIds,
+        tileOrderIds: currentTileOrderIds,
+        tileDetail: "Settings unavailable",
+      }));
+    }
+  }
+
   function handleTileDragStart(tileId: string) {
     setDraggingTileId(tileId);
   }
@@ -1156,6 +1217,13 @@ function App() {
         .map((tileId) => tileById.get(tileId))
         .filter((tile): tile is NonNullable<typeof tile> => Boolean(tile)),
     [dashboardSettings.tileOrderIds],
+  );
+
+  const isDefaultTileLayout = useMemo(
+    () =>
+      areTileIdsEqual(dashboardSettings.visibleTileIds, defaultVisibleTileIds) &&
+      areTileIdsEqual(dashboardSettings.tileOrderIds, defaultTileOrderIds),
+    [dashboardSettings.tileOrderIds, dashboardSettings.visibleTileIds],
   );
 
   const currentModules = useMemo(
@@ -1363,9 +1431,21 @@ function App() {
                   <Settings size={15} />
                   <h2>Tile Settings</h2>
                 </div>
-                <span className="tile-settings-status">
-                  {dashboardSettings.visibleTileIds.length} visible
-                </span>
+                <div className="tile-settings-heading-actions">
+                  <span className="tile-settings-status">
+                    {dashboardSettings.visibleTileIds.length} visible
+                  </span>
+                  <button
+                    aria-label="Reset tile layout"
+                    className="tile-reset-action"
+                    disabled={isDefaultTileLayout || dashboardSettings.status === "saving"}
+                    onClick={() => void handleResetTileLayout()}
+                    type="button"
+                  >
+                    <RotateCcw size={14} />
+                    <span>Reset</span>
+                  </button>
+                </div>
               </header>
 
               <div className="tile-settings-grid" aria-label="Tile visibility controls">
