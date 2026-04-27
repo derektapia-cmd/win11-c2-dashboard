@@ -295,6 +295,7 @@ p {
 .progress-panel,
 .calendar-panel,
 .notes-panel,
+.audit-panel,
 .today-card,
 .progress-card {
   border: 1px solid #282a2b;
@@ -620,7 +621,8 @@ p {
 
 .progress-panel,
 .calendar-panel,
-.notes-panel {
+.notes-panel,
+.audit-panel {
   min-height: 240px;
   padding: 18px;
   border-top-color: rgba(0, 214, 139, 0.62);
@@ -631,7 +633,8 @@ p {
 
 .compact-mode .progress-panel,
 .compact-mode .calendar-panel,
-.compact-mode .notes-panel {
+.compact-mode .notes-panel,
+.compact-mode .audit-panel {
   min-height: 210px;
   padding: 14px;
 }
@@ -725,6 +728,142 @@ p {
   border-radius: inherit;
   background: #04d68b;
   box-shadow: 0 0 14px rgba(0, 214, 139, 0.46);
+}
+
+.audit-panel {
+  margin-top: 24px;
+}
+
+.compact-mode .audit-panel {
+  margin-top: 16px;
+}
+
+.audit-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.audit-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(0, 214, 139, 0.28);
+  border-radius: 999px;
+  color: #04d68b;
+  background: rgba(0, 214, 139, 0.1);
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.audit-offline .audit-status {
+  border-color: rgba(240, 95, 95, 0.34);
+  color: #f05f5f;
+  background: rgba(240, 95, 95, 0.12);
+}
+
+.audit-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.audit-entry,
+.empty-audit {
+  border: 1px solid #282a2b;
+  border-radius: 8px;
+  background: #171717;
+}
+
+.audit-entry {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 108px;
+  padding: 12px;
+}
+
+.audit-risk-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: #04d68b;
+  box-shadow: 0 0 12px rgba(0, 214, 139, 0.45);
+}
+
+.audit-entry.risk-medium .audit-risk-dot {
+  background: #f4af22;
+  box-shadow: 0 0 12px rgba(244, 175, 34, 0.34);
+}
+
+.audit-entry.risk-high .audit-risk-dot,
+.audit-entry.risk-critical .audit-risk-dot {
+  background: #f05f5f;
+  box-shadow: 0 0 12px rgba(240, 95, 95, 0.38);
+}
+
+.audit-entry-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.audit-entry strong {
+  color: #ffffff;
+  font-size: 0.85rem;
+  line-height: 1.25;
+}
+
+.audit-entry time {
+  flex: 0 0 auto;
+  color: #85868b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.audit-entry p {
+  margin: 6px 0 0;
+  color: #9a9ca1;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.audit-entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.audit-entry-meta span {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 3px 7px;
+  border: 1px solid #303236;
+  border-radius: 999px;
+  color: #a6a8ad;
+  background: #111;
+  font-size: 0.66rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.empty-audit {
+  display: grid;
+  min-height: 90px;
+  place-items: center;
+  padding: 12px;
+  color: #8e9095;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: center;
 }
 
 .notes-panel {
@@ -1020,6 +1159,10 @@ p {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .audit-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .lower-dashboard {
     grid-template-columns: 1fr;
   }
@@ -1098,8 +1241,14 @@ p {
 
   .metric-grid,
   .mini-grid,
-  .progress-grid {
+  .progress-grid,
+  .audit-list {
     grid-template-columns: 1fr;
+  }
+
+  .audit-heading-actions {
+    align-items: flex-end;
+    flex-direction: column;
   }
 
   .note-form-actions {

@@ -30,6 +30,10 @@ The lock button toggles persisted Privacy Mode through:
 
 The Compact button toggles a persisted denser dashboard layout through the same endpoint.
 
+The Audit Log panel reads recent local actions from:
+
+`http://127.0.0.1:8765/audit-log`
+
 ## Run
 
 Optional `VITE_*` endpoint overrides are documented in the root `.env.example`.

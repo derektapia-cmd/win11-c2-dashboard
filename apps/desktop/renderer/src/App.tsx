@@ -17,9 +17,11 @@ import {
   Pin,
   PinOff,
   Plus,
+  RefreshCw,
   Search,
   Settings,
   Share2,
+  ShieldCheck,
   Sparkles,
   Terminal,
   Trash2,
@@ -83,6 +85,28 @@ type DashboardSettingsState = {
   compactMode: boolean;
   privacyDetail: string;
   layoutDetail: string;
+};
+
+type AuditRiskLevel = "low" | "medium" | "high" | "critical";
+type AuditStatus = "requested" | "approved" | "completed" | "blocked" | "failed";
+
+type AuditLogRecord = {
+  id: string;
+  action: string;
+  actor: string;
+  target: string;
+  risk_level: AuditRiskLevel;
+  status: AuditStatus;
+  summary: string;
+  metadata: Record<string, string | number | boolean | null>;
+  created_at: string;
+};
+
+type AuditLogState = {
+  status: "checking" | "ready" | "offline";
+  summary: string;
+  detail: string;
+  items: AuditLogRecord[];
 };
 
 type NavItem = {
@@ -170,6 +194,8 @@ const healthUrl =
 const notesUrl = import.meta.env.VITE_BACKEND_NOTES_URL ?? "http://127.0.0.1:8765/notes";
 const settingsUrl =
   import.meta.env.VITE_BACKEND_SETTINGS_URL ?? "http://127.0.0.1:8765/settings";
+const auditLogUrl =
+  import.meta.env.VITE_BACKEND_AUDIT_LOG_URL ?? "http://127.0.0.1:8765/audit-log";
 
 function formatHealthTimestamp(timestampUtc: string) {
   const date = new Date(timestampUtc);
@@ -210,6 +236,31 @@ function getGreeting(date: Date) {
 
 function getTileStatusLabel(status: TileStatus) {
   return tileStatusLabels[status];
+}
+
+function formatAuditTimestamp(timestamp: string) {
+  const date = new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) {
+    return "time unknown";
+  }
+
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatAuditAction(action: string) {
+  return action
+    .split(".")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatAuditStatus(status: AuditStatus) {
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 async function requestNotes(signal?: AbortSignal) {
@@ -298,6 +349,16 @@ async function updateDashboardSettings(payload: Partial<DashboardSettingsRecord>
   return (await response.json()) as DashboardSettingsRecord;
 }
 
+async function requestAuditLog(signal?: AbortSignal) {
+  const response = await fetch(`${auditLogUrl}?limit=6`, { signal });
+
+  if (!response.ok) {
+    throw new Error(`Audit log request failed with HTTP ${response.status}`);
+  }
+
+  return (await response.json()) as AuditLogRecord[];
+}
+
 function App() {
   const [now, setNow] = useState(() => new Date());
   const [health, setHealth] = useState<HealthState>({
@@ -320,6 +381,12 @@ function App() {
     compactMode: false,
     privacyDetail: "Loading privacy mode",
     layoutDetail: "Loading layout mode",
+  });
+  const [auditLog, setAuditLog] = useState<AuditLogState>({
+    status: "checking",
+    summary: "Checking",
+    detail: "Loading local audit events",
+    items: [],
   });
 
   useEffect(() => {
@@ -429,6 +496,41 @@ function App() {
     let isMounted = true;
     const controller = new AbortController();
 
+    async function loadAuditLog() {
+      try {
+        const items = await requestAuditLog(controller.signal);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setLoadedAuditLog(items);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setAuditLog({
+          status: "offline",
+          summary: "Offline",
+          detail: "Start backend to load audit log",
+          items: [],
+        });
+      }
+    }
+
+    void loadAuditLog();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
     async function loadDashboardSettings() {
       try {
         const loadedSettings = await requestDashboardSettings(controller.signal);
@@ -480,6 +582,36 @@ function App() {
     });
   }
 
+  function setLoadedAuditLog(items: AuditLogRecord[]) {
+    setAuditLog({
+      status: "ready",
+      summary: `${items.length} events`,
+      detail: items.length > 0 ? "Recent local actions loaded" : "Waiting for audited actions",
+      items,
+    });
+  }
+
+  async function refreshAuditLog() {
+    setAuditLog((current) => ({
+      ...current,
+      status: current.items.length > 0 ? "ready" : "checking",
+      summary: current.items.length > 0 ? current.summary : "Checking",
+      detail: "Refreshing local audit events",
+    }));
+
+    try {
+      const items = await requestAuditLog();
+      setLoadedAuditLog(items);
+    } catch {
+      setAuditLog((current) => ({
+        ...current,
+        status: "offline",
+        summary: "Offline",
+        detail: "Audit log unavailable",
+      }));
+    }
+  }
+
   async function handleNoteSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -510,6 +642,7 @@ function App() {
       const items = await requestNotes();
 
       setLoadedNotes(items, editingNoteId ? "Note updated locally" : "Latest note saved locally");
+      void refreshAuditLog();
       setNoteTitle("");
       setNoteBody("");
       setEditingNoteId(null);
@@ -549,6 +682,7 @@ function App() {
       });
       const items = await requestNotes();
       setLoadedNotes(items, note.pinned ? "Note unpinned" : "Note pinned");
+      void refreshAuditLog();
     } catch {
       setNotes((current) => ({
         ...current,
@@ -577,6 +711,7 @@ function App() {
       await deleteDashboardNote(note.id);
       const items = await requestNotes();
       setLoadedNotes(items, "Note deleted locally");
+      void refreshAuditLog();
 
       if (editingNoteId === note.id) {
         cancelEditingNote();
@@ -617,6 +752,7 @@ function App() {
           ? "Dense dashboard layout"
           : "Comfortable dashboard layout",
       });
+      void refreshAuditLog();
     } catch {
       setDashboardSettings({
         status: "offline",
@@ -656,6 +792,7 @@ function App() {
           ? "Dense dashboard layout"
           : "Comfortable dashboard layout",
       });
+      void refreshAuditLog();
     } catch {
       setDashboardSettings((current) => ({
         ...current,
@@ -916,6 +1053,53 @@ function App() {
                 </article>
               );
             })}
+          </section>
+
+          <section className={`audit-panel audit-${auditLog.status}`}>
+            <header className="panel-heading">
+              <div>
+                <ShieldCheck size={15} />
+                <h2>Audit Log</h2>
+              </div>
+              <div className="audit-heading-actions">
+                <span className="audit-status">{auditLog.summary}</span>
+                <button
+                  className="ghost-action"
+                  onClick={() => void refreshAuditLog()}
+                  type="button"
+                >
+                  <RefreshCw size={15} />
+                  <span>Refresh</span>
+                </button>
+              </div>
+            </header>
+
+            <div className="audit-list" aria-label="Recent audit events">
+              {auditLog.items.map((entry) => (
+                <article className={`audit-entry risk-${entry.risk_level}`} key={entry.id}>
+                  <span className="audit-risk-dot" />
+                  <div>
+                    <div className="audit-entry-header">
+                      <strong>{formatAuditAction(entry.action)}</strong>
+                      <time dateTime={entry.created_at}>
+                        {formatAuditTimestamp(entry.created_at)}
+                      </time>
+                    </div>
+                    <p>{entry.summary}</p>
+                    <div className="audit-entry-meta">
+                      <span>{entry.target}</span>
+                      <span>{formatAuditStatus(entry.status)}</span>
+                      <span>{entry.risk_level}</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+              {auditLog.items.length === 0 ? (
+                <div className="empty-audit">
+                  <span>{auditLog.detail}</span>
+                </div>
+              ) : null}
+            </div>
           </section>
 
           <section className="lower-dashboard">
