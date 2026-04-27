@@ -25,3 +25,14 @@ OAuth refresh tokens and API keys should use OS-protected secure storage where p
 
 The backend should log security-relevant events such as email send, wallet connect/disconnect, API key changes, terminal commands, notes export, and settings changes.
 
+## Secret Scanning
+
+Run the committed-file scanner before release checkpoints:
+
+```powershell
+.\scripts\check-secrets.ps1
+```
+
+The scanner checks tracked source and docs for common private key blocks, API keys, access tokens, and suspicious secret assignments. Runtime folders, ignored local databases, `.env`, and `.env.local` remain outside Git.
+
+Current checkpoint result: no committed secrets found by the tracked scanner.

@@ -26,7 +26,7 @@ This checklist starts small and will grow as the app becomes real.
 
 ## Safety
 
-- [ ] No secrets are committed
+- [x] No secrets are committed
 - [x] `.env.example` documents required variables
 - [x] Error states appear per tile
 - [x] Audit log model exists
